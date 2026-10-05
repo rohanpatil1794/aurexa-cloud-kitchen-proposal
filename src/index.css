@@ -1,0 +1,82 @@
+@import "tailwindcss";
+@import "@fontsource/public-sans/latin-300.css";
+@import "@fontsource/public-sans/latin-400.css";
+@import "@fontsource/public-sans/latin-500.css";
+@import "@fontsource/public-sans/latin-600.css";
+@import "@fontsource/public-sans/latin-700.css";
+@import "@fontsource/public-sans/latin-800.css";
+
+/* Brand tokens (palette.png). Use as Tailwind utilities: bg-teal, text-orange, bg-cream, border-sand ... */
+@theme {
+  --font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-teal: #1d6866;
+  --color-teal-mid: #5f9392;
+  --color-teal-light: #8cc1c0;
+  --color-orange: #cb622a;
+  --color-sand: #edcb95;
+  --color-cream: #f6e3c2;
+  --color-olive: #8f854a;
+  --color-slate: #77838d;
+  --color-steel: #9aa7b2;
+  --color-steel-light: #c7d0d8;
+  --color-stage: #070d0e;
+  --color-wall: #f4f1ea;
+  --color-ink: #0c1718;
+
+  --tracking-wide-brand: 0.22em;
+}
+
+:root {
+  color-scheme: light;
+  --stage-bg: #070d0e;
+  --glass-bg: rgba(8, 22, 23, 0.62);
+  --glass-border: rgba(246, 227, 194, 0.16);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-wall);
+  color: var(--color-ink);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Wide-tracked uppercase headings, matching the logo wordmark */
+.brand-heading {
+  font-family: var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide-brand);
+  font-weight: 500;
+}
+
+/* The stage never scrolls the page on touch while the user is dragging the model */
+#stage canvas { touch-action: none; display: block; }
+
+/* Glass panel used by the explorer UI */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  color: var(--color-cream);
+}
+
+/* ---- owner: stage agent --------------------------------------------------- */
+
+/* ---- owner: M3 UI agent --------------------------------------------------- */
+
+/* ---- owner: M5 branding/sections agent ------------------------------------- */
