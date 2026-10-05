@@ -25,13 +25,13 @@ const TEAL = '#1a5f5d';
 const STEEL = '#b9c3cb';
 const STEEL_DARK = '#a3afb8';
 
-/** The roof deck: a pale, mostly transparent plate so the ground markings stay readable from above. */
+/** The roof deck: a frosted-glass plate (drawn by PickupZone), thin enough to read as a canopy while the rooms behind it stay legible. */
 export const CANOPY_DECK = {
   x: (CANOPY.x0 + CANOPY.x1) / 2,
-  y: CANOPY.y + 0.1,
+  y: CANOPY.y + 0.125,
   z: WALL_FACE + CANOPY.depth / 2,
   w: CANOPY.x1 - CANOPY.x0,
-  h: 0.2,
+  h: 0.25,
   d: CANOPY.depth,
 } as const;
 
@@ -42,14 +42,14 @@ export function canopy(b: PrimBuilder): void {
   const zc = WALL_FACE + depth / 2;
   const zEdge = WALL_FACE + depth;
 
-  // teal fascia round the (separately drawn) deck
+  // teal fascia round the (separately drawn) glass deck
   b.box({ c: TEAL, x: cx, y: y - 0.2, z: zEdge - 0.06, w: w + 0.2, h: 0.62, d: 0.12 });
   for (const sx of [-1, 1]) b.box({ c: TEAL, x: cx + sx * (w / 2 + 0.04), y: y - 0.2, z: zc, w: 0.12, h: 0.62, d: depth });
 
-  // purlins under the deck and one cantilever beam per post
+  // glazing bars on top of the deck (they frame the glass from above) and one cantilever beam per post
   const ribs = 9;
   for (let i = 0; i < ribs; i++) {
-    b.box({ c: STEEL, x: x0 + 0.3 + (i * (w - 0.6)) / (ribs - 1), y: y - 0.14, z: zc, w: 0.07, h: 0.14, d: depth - 0.1, shadow: false });
+    b.box({ c: STEEL, x: x0 + 0.3 + (i * (w - 0.6)) / (ribs - 1), y: y + CANOPY_DECK.h, z: zc, w: 0.1, h: 0.06, d: depth - 0.1, shadow: false });
   }
   for (const px of posts) {
     b.box({ c: STEEL_DARK, x: px, y: y - 0.42, z: zc - 0.02, w: 0.16, h: 0.42, d: depth - 0.12 });

@@ -5,20 +5,19 @@ import { bench, bin } from '../../../lib/kit';
 import { BIN_COLORS, BRAND } from '../../../lib/palette';
 import type { PrimBuilder } from '../../../lib/prims';
 import type { KindBuilder } from '../registry';
+import { INK, num } from './kindKit';
 import {
-  CERAMIC, CERAMIC_SOILED, INK, plateRow, stack, STEEL, STEEL_DARK, STEEL_MID, TROLLEY_TOPS, trays, trolleyFrame,
+  CERAMIC, CERAMIC_SOILED, plateRow, stack, STEEL, STEEL_DARK, STEEL_MID, TROLLEY_TOPS, trays, trolleyFrame,
 } from './supportKit';
-
-const num = (v: unknown, d = 0) => (typeof v === 'number' ? v : d);
 
 /** Flat numbered floor disc (1-5) with a name plate beside it; sits on the Dirty-route point of each stage. */
 const dishStage: KindBuilder = (b, it) => {
   b.cyl({ m: 'matte', c: '#16403f', y: 0.03, r: 0.68, h: 0.02, shadow: false });
   b.cyl({ m: 'matte', c: BRAND.orange, y: 0.045, r: 0.58, h: 0.02, shadow: false });
-  b.sign({ text: String(num(it.props?.n)), y: 0.075, rx: -90, w: 0.95, h: 0.95, fg: '#ffffff' });
+  b.sign({ text: String(num(it, 'n', 0)), y: 0.075, rx: -90, w: 0.95, h: 0.95, fg: '#ffffff' });
   b.sign({
-    text: (it.label ?? '').toUpperCase(), x: num(it.props?.lx), z: num(it.props?.lz), y: 0.07, rx: -90,
-    w: num(it.props?.lw, 2), h: 0.42, fg: BRAND.cream, bg: '#12403f', tracking: 0.12,
+    text: (it.label ?? '').toUpperCase(), x: num(it, 'lx', 0), z: num(it, 'lz', 0), y: 0.07, rx: -90,
+    w: num(it, 'lw', 2), h: 0.42, fg: BRAND.cream, bg: '#12403f', tracking: 0.12,
   });
 };
 

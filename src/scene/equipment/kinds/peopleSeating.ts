@@ -2,7 +2,7 @@
 import { BRAND } from '../../../lib/palette';
 import { STEEL_DARK, plant, stool } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
-import { num } from './peopleShared';
+import { num } from './kindKit';
 
 const BENCH_WOOD = '#7a5233';
 const BENCH_LEG = '#6d7882';

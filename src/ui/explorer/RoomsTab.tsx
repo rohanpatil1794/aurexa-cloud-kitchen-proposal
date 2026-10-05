@@ -4,6 +4,7 @@ import { useStore } from '../../store';
 import { ROOMS_GROUPED, roomArea } from '../../data/layout';
 import type { Room } from '../../data/types';
 import { pickRoom } from './actions';
+import { focusRoomHeading } from './focus';
 import { MicroHeading, ZoneDot, scrollIntoNearest } from './parts';
 
 const RoomRow = memo(function RoomRow({ room, selected, hovered }: { room: Room; selected: boolean; hovered: boolean }) {
@@ -20,8 +21,13 @@ const RoomRow = memo(function RoomRow({ room, selected, hovered }: { room: Room;
       <button
         ref={ref}
         type="button"
+        data-room-row={room.id}
         aria-current={selected ? 'true' : undefined}
-        onClick={() => pickRoom(room.id)}
+        onClick={(e) => {
+          pickRoom(room.id);
+          // Enter / Space (a click with no pointer): the card takes focus, Esc brings it back to this row.
+          if (e.detail === 0) focusRoomHeading();
+        }}
         // Mouse hover lights the room in the 3D view too (touch has no hover).
         onPointerEnter={(e) => e.pointerType === 'mouse' && setHoveredRoom(room.id)}
         onPointerLeave={(e) => e.pointerType === 'mouse' && setHoveredRoom(null)}
@@ -31,7 +37,7 @@ const RoomRow = memo(function RoomRow({ room, selected, hovered }: { room: Room;
       >
         <ZoneDot zone={room.zone} blank />
         <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{room.name}</span>
-        <span className={`shrink-0 text-[11px] tabular-nums ${selected ? 'text-ink' : 'text-cream/55'}`}>
+        <span className={`shrink-0 text-[11px] tabular-nums ${selected ? 'text-ink' : 'text-cream/70'}`}>
           {Math.round(roomArea(room))} sq ft
         </span>
       </button>
@@ -45,14 +51,14 @@ export function RoomsTab() {
   return (
     <div className="space-y-5">
       {ROOMS_GROUPED.map(({ group, rooms }) => (
-        <section key={group.id} aria-label={group.name}>
+        <div key={group.id}>
           <MicroHeading className="mb-1.5 px-3">{group.name}</MicroHeading>
           <ul className="space-y-0.5">
             {rooms.map((r) => (
               <RoomRow key={r.id} room={r} selected={r.id === selectedRoom} hovered={r.id === hoveredRoom} />
             ))}
           </ul>
-        </section>
+        </div>
       ))}
     </div>
   );

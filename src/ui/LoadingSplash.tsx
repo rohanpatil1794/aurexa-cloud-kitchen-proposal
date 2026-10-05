@@ -10,6 +10,7 @@ const FADE_S = 0.7;
 /**
  * Full-screen brand splash while the 3D scene starts. Images only (the real mark and wordmark cuts),
  * so it paints before any web font arrives. Portalled to <body> so it covers the top bar too.
+ * index.html holds a static copy of this markup (the boot screen React replaces): keep the two in step.
  */
 export function LoadingSplash() {
   const sceneReady = useStore((s) => s.phase !== 'loading');

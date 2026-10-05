@@ -3,7 +3,9 @@
 import { BRAND } from '../../../lib/palette';
 import { FOLIAGE_GREEN, FOLIAGE_OLIVE } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
-import { GLOW, between, num, pick, rng } from './peopleShared';
+import { between, pick, rng } from '../rng';
+import { num } from './kindKit';
+import { GLOW } from './peopleShared';
 
 /** Raised bed rim height and the soil surface everything grows from. */
 const BED_H = 1.15;

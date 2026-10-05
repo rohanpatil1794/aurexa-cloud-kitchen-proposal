@@ -1,24 +1,14 @@
 // Shared constants and small helpers for the Support & Utilities kind builders (support*.ts in this folder).
-import * as THREE from 'three';
 import type { PrimBuilder } from '../../../lib/prims';
 import { CHARCOAL, STEEL, STEEL_DARK, STEEL_MID } from '../../../lib/kit';
+import { INK } from './kindKit';
 
 export { CHARCOAL, STEEL, STEEL_DARK, STEEL_MID };
 
-export const INK = '#2b3236';
 export const CERAMIC = '#fbf9f3';
 export const CERAMIC_SOILED = '#dcd3c0';
 /** Underside of the overhead services (cable tray), ft above the floor. */
 export const TRAY_Y = 7.3;
-
-const _a = new THREE.Color();
-const _b = new THREE.Color();
-
-/** Mix colour `c` towards white (t > 0) or black (t < 0) by |t|. */
-export function shade(c: string, t: number): string {
-  _a.set(c);
-  return `#${_a.lerp(_b.set(t > 0 ? '#ffffff' : '#000000'), Math.abs(t)).getHexString()}`;
-}
 
 /** Flat plate lying on the floor (floors are at y 0.02). */
 export function floorPlate(

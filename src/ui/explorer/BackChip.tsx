@@ -18,6 +18,8 @@ export function BackChip({ className = '' }: { className?: string }) {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.94 }}
           transition={t}
+          data-focus-return
+          data-label-obstacle
           className={`glass explorer-chip pointer-events-auto flex min-h-11 items-center gap-2 rounded-full pl-3.5 pr-4 text-[13px] font-medium ${className}`}
         >
           <BackIcon size={15} />

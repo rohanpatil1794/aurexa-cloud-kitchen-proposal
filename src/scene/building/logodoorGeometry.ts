@@ -1,4 +1,4 @@
-// Geometry for the Staff Entrance "logo door" (see public/assets/logo-light.png): a chunky, slightly
+// Geometry for the Staff Entrance "logo door" (see brand-src/logo-light.png): a chunky, slightly
 // irregular cream surround, a teal leaf with a half-round fan-light, and a terracotta step and pot.
 //
 // Local frame: origin on the south wall's centre line at the door centre, +x east, +z outside (south),
@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { STAFF_ENTRANCE, WALL } from '../../data/layout';
+import { rng } from '../equipment/rng';
 
 export const SPEC = {
   halfW: STAFF_ENTRANCE.w / 2,
@@ -21,8 +22,12 @@ export const SPEC = {
   surroundD: 0.3,
   step: { w: 4.3, h: 0.16, d: 0.66 },
   cornice: { w: 4.5, h: 0.3, d: 0.44 },
-  /** Door leaf, hinged on the west side (as seen from outside) and ajar `angle` degrees inward. */
-  leaf: { w: 2.76, y0: 0.2, y1: 6.9, t: 0.14, hingeX: -1.4, hingeZ: -0.04, angle: 24 },
+  /**
+   * Door leaf, hinged on the east side (as seen from outside) and ajar `angle` degrees inward. The leaf is modelled with
+   * the hinge on its local x = 0, so it hangs from a group turned (180 - angle) degrees: the free edge, and the knob on it,
+   * then sit on the west side, in plain view from the south-east Entrance camera.
+   */
+  leaf: { w: 2.76, y0: 0.2, y1: 6.9, t: 0.14, hingeX: 1.4, hingeZ: -0.04, angle: 16 },
   /** Fan-light: half-disc of radius r on a flat base, centred on the leaf (leaf-local coordinates). */
   fan: { cx: 1.38, base: 5.2, r: 1.08 },
 } as const;
@@ -32,17 +37,6 @@ export const LAMP = { x: 2.45, y: 6, z: SPEC.face + SPEC.surroundD / 2 } as cons
 
 /** Pot centre (local plan coordinates): beside the surround, inside the plinth margin. */
 export const POT = { x: -2.55, z: SPEC.face + 0.58 } as const;
-
-/** Small deterministic PRNG (mulberry32), so the "hand-made" wobble is the same on every load. */
-export function rng(seed: number): () => number {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /**
  * The cream surround: an inverted U (two jambs and a head) cut from one wobbly outline and extruded with a

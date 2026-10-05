@@ -1,6 +1,8 @@
 /* Room label pills (src/scene/layers/Labels.tsx).
    One absolutely positioned layer over the canvas. Labels.tsx moves each .lbl with a transform and fades it
-   with opacity / visibility; everything else (hover, selected, compact) is plain CSS driven by data attributes. */
+   with opacity / visibility; everything else (hover, selected, compact, dot) is plain CSS driven by data attributes.
+   Compact (phones, a narrow stage): short one-line names in smaller type, and a room far smaller than its pill (data-mini)
+   shows the dot face instead; the pill and the dot are two faces of the same .lbl, whichever is shown sits in the flow. */
 
 .lbl-layer {
   --lbl-teal: var(--color-teal, #1d6866);
@@ -19,8 +21,8 @@
 }
 .lbl-layer[data-compact] {
   --lbl-font: 9px;
-  --lbl-pad-y: 4px;
-  --lbl-pad-x: 8px;
+  --lbl-pad-y: 3.5px;
+  --lbl-pad-x: 7px;
 }
 
 .lbl {
@@ -89,14 +91,86 @@
   -webkit-tap-highlight-color: transparent;
   transition:
     transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease,
     box-shadow 0.22s ease,
     background-color 0.22s ease;
 }
 
 /* Letter-spacing leaves a trailing gap after each line: balance it so the text centres. */
-.lbl-name > span {
+.lbl-name > span,
+.lbl-name-short {
   display: block;
   padding-left: 0.16em;
+}
+.lbl-name-short {
+  display: none;
+}
+.lbl-layer[data-compact] .lbl-pill {
+  letter-spacing: 0.12em;
+}
+.lbl-layer[data-compact] .lbl-name-full {
+  display: none;
+}
+.lbl-layer[data-compact] .lbl-name-short {
+  display: block;
+  padding-left: 0.12em;
+}
+.lbl-layer[data-compact] .lbl-dot {
+  width: 6px;
+  height: 6px;
+}
+
+/* The dot a small room shrinks to on compact screens: 15 px with its cream ring; the ::after is a larger touch target. */
+.lbl-mini {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #fffaf0;
+  border-radius: 50%;
+  background: var(--dot, var(--lbl-teal));
+  background-clip: padding-box;
+  box-shadow: 0 1px 3px rgba(7, 13, 14, 0.55), 0 3px 8px rgba(7, 13, 14, 0.35);
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    opacity 0.2s ease,
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lbl-mini::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+}
+.lbl[data-mini] .lbl-mini {
+  position: relative;
+  left: auto;
+  top: auto;
+  translate: none;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.lbl[data-mini] .lbl-pill {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+.lbl-mini:focus-visible {
+  outline: 2px solid var(--lbl-orange);
+  outline-offset: 3px;
 }
 
 .lbl-dot {

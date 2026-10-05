@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { PrimBuilder } from '../../lib/prims';
 import { BRAND, SCENE } from '../../lib/palette';
-import { LAMP, POT, SPEC, rng } from './logodoorGeometry';
+import { rng } from '../equipment/rng';
+import { LAMP, POT, SPEC } from './logodoorGeometry';
 
 export const DOOR_COLORS = {
   cream: '#f7e6c6',
@@ -14,6 +15,8 @@ export const DOOR_COLORS = {
   tealPanelEdge: '#36908a',
   tealPanelField: '#206b68',
   brass: SCENE.brass,
+  /** Glossy rather than metallic: a metal ball mostly mirrors the dark stage and reads black. */
+  knob: '#dcb052',
   lamp: '#ffd9a0',
 } as const;
 
@@ -67,8 +70,9 @@ export function buildDoorDetail(): PrimBuilder {
   b.box({ c: C.cream, y: openH - reveal, w: halfW * 2, h: reveal, d: wallD });
   b.box({ c: C.terracotta, w: (halfW - reveal) * 2, h: step.h, d: wallD });
 
-  // leaf details (leaf-local frame: hinge on x = 0, +x towards the free edge, leaf front = +z)
-  b.frame({ x: leaf.hingeX, z: leaf.hingeZ, ry: leaf.angle }, () => {
+  // leaf details (leaf-local frame: hinge on x = 0, +x towards the free edge; the frame is turned half way round, so the
+  // outside face of the leaf is local -z)
+  b.frame({ x: leaf.hingeX, z: leaf.hingeZ, ry: 180 - leaf.angle }, () => {
     const half = leaf.t / 2;
     for (const s of [1, -1]) {
       // two raised panels under the fan-light
@@ -76,16 +80,16 @@ export function buildDoorDetail(): PrimBuilder {
         b.box({ c: C.tealPanelEdge, x: px, y: 0.9, z: s * (half + 0.02), w: 0.84, h: 3.7, d: 0.04 });
         b.box({ c: C.tealPanelField, x: px, y: 1.0, z: s * (half + 0.055), w: 0.64, h: 3.5, d: 0.03 });
       }
-      // brass door knob on the free edge: rose, neck, ball
-      const kx = leaf.w - 0.2;
+      // brass door knob on the free edge: rose, neck, ball (0.3 ft across, so it reads from the Entrance camera)
+      const kx = leaf.w - 0.28;
       const ky = 3.05;
-      b.cyl({ m: 'brass', c: C.brass, r: 0.12, h: 0.03, x: kx, y: ky - 0.015, z: s * (half + 0.015), rx: 90 });
-      b.cyl({ m: 'brass', c: C.brass, r: 0.035, h: 0.16, x: kx, y: ky - 0.08, z: s * (half + 0.1), rx: 90 });
-      b.sph({ m: 'brass', c: C.brass, r: 0.1, x: kx, y: ky, z: s * (half + 0.2) });
+      b.cyl({ m: 'gloss', c: C.knob, r: 0.17, h: 0.04, x: kx, y: ky - 0.02, z: s * (half + 0.02), rx: 90 });
+      b.cyl({ m: 'gloss', c: C.knob, r: 0.05, h: 0.2, x: kx, y: ky - 0.1, z: s * (half + 0.12), rx: 90 });
+      b.sph({ m: 'gloss', c: C.knob, r: 0.15, x: kx, y: ky, z: s * (half + 0.3) });
     }
-    // glints on the upper-left panel, as in the logo
+    // glints on the upper panel next to the hinge, as in the logo (outside face, so local -z and a mirrored lean)
     for (const gx of [0.5, 0.6]) {
-      b.box({ c: '#7fc0bd', x: gx + 0.12, y: 3.95, z: half + 0.073, w: 0.035, h: 0.55, d: 0.006, rz: -22, shadow: false });
+      b.box({ c: '#7fc0bd', x: gx + 0.12, y: 3.95, z: -(half + 0.073), w: 0.035, h: 0.55, d: 0.006, rz: 22, shadow: false });
     }
     // fan-light mullions: five spokes from the base centre and a hub
     for (let a = 30; a <= 150; a += 30) {

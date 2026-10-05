@@ -19,7 +19,21 @@ export const FLOW_RIBBON = {
   radius: 0.8,
   /** Travel speed of the arrowheads, ft per second. */
   speed: 2.5,
+  /** Narrowest a ribbon draws on screen (CSS px): the renderer widens it with distance, e.g. on a phone. */
+  minPx: 7,
+  /** The widest a ribbon may be drawn, x its width, and the clear space kept between two widened ribbons of different flows, ft. */
+  maxGrow: 1.7,
+  growGap: 0.06,
 } as const;
+
+/**
+ * A second cue besides colour, so the flows stay apart for colour-blind viewers (olive and orange, teal and black):
+ *   single = a solid band with one chevron per repeat;   double = a solid band with a pair of chevrons;
+ *   dashed = a broken band with a chevron on each dash;  solid = a solid band with a filled arrowhead.
+ * The 3D ribbons (flowsTexture.ts) and the legend swatches draw the same pattern.
+ */
+export type FlowPattern = 'single' | 'double' | 'dashed' | 'solid';
+export const FLOW_PATTERNS: Record<FlowId, FlowPattern> = { raw: 'single', staff: 'double', dirty: 'dashed', orders: 'solid' };
 
 const doorAt = (id: string): Vec2 => {
   const o = OPENINGS.find((d) => d.id === id);

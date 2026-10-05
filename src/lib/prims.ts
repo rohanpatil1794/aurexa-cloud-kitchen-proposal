@@ -45,6 +45,8 @@ interface PrimRec {
   color: THREE.Color;
   matrix: THREE.Matrix4;
   shadow: boolean;
+  /** Drawn with the coarse twin of its geometry (see COARSE_R). */
+  coarse: boolean;
 }
 
 export interface SignOpts {
@@ -88,8 +90,23 @@ const GEO: Record<PrimGeo, THREE.BufferGeometry> = {
   sph: new THREE.SphereGeometry(1, 16, 10),
 };
 
+/**
+ * Coarse twins of the round geometries, for details (knobs, burners, handles, tiny pipes). Below COARSE_R feet a
+ * silhouette is a few pixels across even at eye level, so a 10-gon is indistinguishable and costs half the triangles
+ * in the main and the shadow pass. (Gated by size, not by quality tier: switching geometry at runtime would rebuild every batch.)
+ */
+const COARSE_R = 0.25;
+const GEO_COARSE: Partial<Record<PrimGeo, THREE.BufferGeometry>> = {
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 10, 1),
+  sph: new THREE.SphereGeometry(1, 10, 7),
+};
+/** Parts smaller than this (largest dimension, ft) never cast a shadow by default: at 0.05 ft per shadow texel it is a smudge. */
+const MIN_SHADOW_EXTENT = 0.3;
+
 const MAT: Record<PrimMat, THREE.Material> = {
-  steel: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.85, roughness: 0.36 }),
+  // Brushed stainless: not fully metallic, so a face turned away from the key still shows a little diffuse
+  // (key + hemisphere) instead of mirroring only the environment, and rough enough to blur the studio panels into a satin sheen.
+  steel: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.78, roughness: 0.4 }),
   matte: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 0.82 }),
   gloss: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.05, roughness: 0.26 }),
   glass: new THREE.MeshStandardMaterial({
@@ -134,12 +151,15 @@ export class PrimBuilder {
     _e.set((o.rx ?? 0) * DEG, (o.ry ?? 0) * DEG, (o.rz ?? 0) * DEG, 'YXZ');
     const local = new THREE.Matrix4().compose(_v.set(cx, cy, cz), _q.setFromEuler(_e), _s.set(sx, sy, sz));
     const mat = o.m ?? 'matte';
+    const round = geo === 'cyl' || geo === 'sph';
+    const extent = geo === 'box' ? Math.max(sx, sy, sz) : geo === 'sph' ? 2 * Math.max(sx, sy, sz) : Math.max(2 * Math.max(sx, sz), sy);
     this.prims.push({
       geo,
       mat,
       color: new THREE.Color(o.c ?? '#ffffff'),
       matrix: new THREE.Matrix4().multiplyMatrices(this.top, local),
-      shadow: (o.shadow ?? true) && mat !== 'glass' && mat !== 'emissive',
+      shadow: (o.shadow ?? extent >= MIN_SHADOW_EXTENT) && mat !== 'glass' && mat !== 'emissive',
+      coarse: round && Math.max(sx, sz, geo === 'sph' ? sy : 0) < COARSE_R,
     });
   }
 
@@ -179,6 +199,7 @@ export class PrimBuilder {
       color: new THREE.Color(o.c ?? '#ffffff'),
       matrix: new THREE.Matrix4().multiplyMatrices(this.top, local),
       shadow: (o.shadow ?? false) && mat !== 'glass' && mat !== 'emissive',
+      coarse: o.r < COARSE_R,
     });
   }
 
@@ -190,20 +211,20 @@ export class PrimBuilder {
   }
 }
 
-/** Build one InstancedMesh per (geometry × material × shadow) from a builder. */
+/** Build one InstancedMesh per (geometry × detail level × material × shadow) from a builder. */
 export function buildBatch(builder: PrimBuilder): THREE.Group {
   const group = new THREE.Group();
   group.name = 'prim-batch';
   const buckets = new Map<string, PrimRec[]>();
   for (const p of builder.prims) {
-    const key = `${p.geo}|${p.mat}|${p.shadow ? 1 : 0}`;
+    const key = `${p.geo}|${p.mat}|${p.shadow ? 1 : 0}|${p.coarse ? 1 : 0}`;
     let list = buckets.get(key);
     if (!list) buckets.set(key, (list = []));
     list.push(p);
   }
   for (const [key, list] of buckets) {
-    const [geo, mat, shadow] = key.split('|') as [PrimGeo, PrimMat, string];
-    const mesh = new THREE.InstancedMesh(GEO[geo], MAT[mat], list.length);
+    const [geo, mat, shadow, coarse] = key.split('|') as [PrimGeo, PrimMat, string, string];
+    const mesh = new THREE.InstancedMesh((coarse === '1' && GEO_COARSE[geo]) || GEO[geo], MAT[mat], list.length);
     mesh.name = `inst-${geo}-${mat}`;
     for (let i = 0; i < list.length; i++) {
       mesh.setMatrixAt(i, list[i].matrix);

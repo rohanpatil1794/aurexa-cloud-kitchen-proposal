@@ -1,9 +1,9 @@
 // Kind builders for the Male/Female Toilets: cubicle bank, vanity with basins and mirrors, hand dryer.
 import { BRAND } from '../../../lib/palette';
 import type { KindBuilder } from '../registry';
-import { CERAMIC, INK, STEEL, STEEL_DARK } from './supportKit';
+import { INK, num } from './kindKit';
+import { CERAMIC, STEEL, STEEL_DARK } from './supportKit';
 
-const num = (v: unknown, d = 0) => (typeof v === 'number' ? v : d);
 const PANEL = '#dfe3e2';
 
 /**
@@ -11,7 +11,7 @@ const PANEL = '#dfe3e2';
  * Local front (+z) is the door side, local back (-z) the wall.
  */
 const toiletBank: KindBuilder = (b, it) => {
-  const n = num(it.props?.n, 4), split = num(it.props?.split, 2);
+  const n = num(it, 'n', 2), split = num(it, 'split', 1);
   const p = it.w / n, h = it.h ?? 6.2, f = it.d / 2;
   for (let i = 0; i <= n; i++) {
     const nudge = i === 0 ? 0.03 : i === n ? -0.03 : 0;
@@ -23,12 +23,14 @@ const toiletBank: KindBuilder = (b, it) => {
     const male = i < split;
     const c = male ? BRAND.teal : BRAND.orange;
     b.box({ m: 'matte', c, x, y: 0.7, z: f - 0.04, w: p - 0.14, h: 5.1, d: 0.05 });
-    b.box({ m: 'steel', c: STEEL, x: x + p / 2 - 0.2, y: 3.0, z: f, w: 0.05, h: 0.22, d: 0.05, shadow: false });
-    b.sign({ text: male ? 'M' : 'F', x, y: 4.75, z: f - 0.003, w: 0.5, h: 0.5, fg: c, bg: BRAND.cream });
-    // close-coupled WC against the back wall
-    b.box({ m: 'gloss', c: CERAMIC, x, z: -f + 0.78, w: 0.55, h: 0.85, d: 0.95 });
-    b.box({ m: 'gloss', c: '#e4ded0', x, y: 0.85, z: -f + 0.78, w: 0.5, h: 0.05, d: 0.8, shadow: false });
-    b.box({ m: 'gloss', c: CERAMIC, x, y: 0.85, z: -f + 0.25, w: 0.5, h: 0.95, d: 0.3 });
+    b.box({ m: 'steel', c: STEEL, x: x + p / 2 - 0.3, y: 3.0, z: f, w: 0.06, h: 0.26, d: 0.05, shadow: false });
+    b.sign({ text: male ? 'M' : 'F', x, y: 4.75, z: f - 0.003, w: 0.6, h: 0.6, fg: c, bg: BRAND.cream });
+    // close-coupled WC against the back wall: bowl, seat and cistern, with a roll holder on the side partition
+    b.box({ m: 'gloss', c: CERAMIC, x, z: -f + 0.95, w: 1.0, h: 0.85, d: 1.1 });
+    b.box({ m: 'gloss', c: '#e4ded0', x, y: 0.85, z: -f + 0.95, w: 0.94, h: 0.05, d: 0.98, shadow: false });
+    b.box({ m: 'gloss', c: CERAMIC, x, y: 0.85, z: -f + 0.2, w: 0.94, h: 0.95, d: 0.4 });
+    b.box({ m: 'steel', c: STEEL, x, y: 1.7, z: -f + 0.2, w: 0.14, h: 0.05, d: 0.05, shadow: false });
+    b.cyl({ m: 'matte', c: BRAND.cream, x: x - p / 2 + 0.2, y: 2.4, z: -f + 0.9, r: 0.17, h: 0.22, rz: 90, shadow: false });
   }
   // MALE / FEMALE headers standing on the partitions
   const headers: [from: number, to: number, c: string, text: string][] = [

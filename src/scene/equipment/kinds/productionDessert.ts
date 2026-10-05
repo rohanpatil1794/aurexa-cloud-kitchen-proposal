@@ -3,7 +3,9 @@
 import type { KindBuilder } from '../registry';
 import { BRAND, SCENE } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK, STEEL_MID } from '../../../lib/kit';
-import { INK, PANEL, PANEL_LIGHT, pick, rodX, seeded } from './productionParts';
+import { pick, rng } from '../rng';
+import { INK } from './kindKit';
+import { PANEL, PANEL_LIGHT, rodX } from './productionParts';
 
 const PASTRY = ['#d98a98', '#e6d3a0', '#5b3a2a', '#c98a3d', '#a9c279'] as const;
 const CHOCOLATE = '#5b3a2a';
@@ -28,7 +30,7 @@ const freezer: KindBuilder = (b, it) => {
 const marbleCounter: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 3;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   const slab = 0.2, dc = d - 0.3, f = dc / 2, fw = (w - 0.2) / 3;
   b.box({ m: 'steel', c: CHARCOAL, w: w - 0.4, h: 0.3, d: dc - 0.2 });
   b.box({ m: 'gloss', c: PANEL, y: 0.3, w: w - 0.2, h: h - slab - 0.3, d: dc });
@@ -85,7 +87,7 @@ const marbleCounter: KindBuilder = (b, it) => {
 const trayShelf: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 5.5;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   const px = w / 2 - 0.06, pz = d / 2 - 0.06;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box({ m: 'steel', c: STEEL_DARK, x: sx * px, z: sz * pz, w: 0.12, h, d: 0.12 });
   for (let l = 0; l < 4; l++) {

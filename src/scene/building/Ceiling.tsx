@@ -9,8 +9,10 @@ import { WALL_COLORS } from './wallModel';
 
 /** Slab thickness: the ceiling rests ON the wall tops, underside at y = wallAnim.h. */
 const SLAB = 0.4;
-/** Opacity when the camera is above the ceiling plane, so the plan stays readable. */
-const GHOST = 0.15;
+/** Opacity when the camera is above the ceiling plane: a visible lid, still see-through enough to read the plan. */
+const GHOST = 0.3;
+/** The recessed light panels fade this much faster than the slab, so they stay readable through the ghost. */
+const LIGHT_BOOST = 3;
 /** Damping rate for the ghost <-> opaque fade (1/s). */
 const FADE = 7;
 const SKYLIGHT_OPACITY = 0.3;
@@ -37,9 +39,12 @@ function gardenHole() {
   };
 }
 
-/** Recessed light panels: a small regular grid centred inside every space (never over a wall, never over the garden). */
-function panelGrid(): { x: number; z: number; s: number }[] {
-  const out: { x: number; z: number; s: number }[] = [];
+/**
+ * Recessed light panels: a small regular grid centred inside every space (never over a wall, never over the garden).
+ * `pitch` is the grid spacing, so the evening light pools (EveningGlow) can match it.
+ */
+export function panelGrid(): { x: number; z: number; s: number; pitch: number }[] {
+  const out: { x: number; z: number; s: number; pitch: number }[] = [];
   const inset = WALL.outer / 2;
   for (const r of [...ROOMS, ...CIRCULATION]) {
     if (r.id === 'garden') continue;
@@ -48,7 +53,7 @@ function panelGrid(): { x: number; z: number; s: number }[] {
     const nx = Math.max(1, Math.round(w / 6)), nz = Math.max(1, Math.round(d / 6));
     const cw = w / nx, cd = d / nz;
     const s = THREE.MathUtils.clamp(Math.min(cw, cd) * 0.5, 0.8, 2);
-    for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) out.push({ x: r.x + inset + (i + 0.5) * cw, z: r.z + inset + (k + 0.5) * cd, s });
+    for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) out.push({ x: r.x + inset + (i + 0.5) * cw, z: r.z + inset + (k + 0.5) * cd, s, pitch: Math.min(cw, cd) });
   }
   return out;
 }
@@ -100,9 +105,19 @@ function slabGeometries(): { under: THREE.BufferGeometry; shell: THREE.BufferGeo
   return { under: make(under), shell: make(shell) };
 }
 
+/** Opacity, switching a material between the opaque and the blended pipeline only when it has to. */
+function setFade(m: THREE.Material, opacity: number, opaque: boolean): void {
+  m.opacity = opacity;
+  if (m.transparent === opaque) {
+    m.transparent = !opaque;
+    m.depthWrite = opaque;
+  }
+}
+
 class CeilingRig {
   readonly group = new THREE.Group();
   private readonly fadeMats: (THREE.MeshStandardMaterial | THREE.MeshBasicMaterial)[] = [];
+  private readonly lightMats: THREE.MeshBasicMaterial[] = [];
   private readonly skylight: THREE.Mesh;
   private readonly skylightMat: THREE.MeshStandardMaterial;
   private readonly disposables: { dispose(): void }[] = [];
@@ -136,12 +151,13 @@ class CeilingRig {
     }
     this.fadeMats.push(underMat, shellMat);
 
-    // ---- recessed light panels: thin dark reveal + bright inset (both face down only) ----
+    // ---- recessed light panels: thin dark reveal + bright inset ----
     const panels = panelGrid();
     const plane = keep(new THREE.PlaneGeometry(1, 1).rotateX(Math.PI / 2));
-    const revealMat = keep(new THREE.MeshBasicMaterial({ color: '#3b4044', polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    // Double-sided: from above (the ghost view) the panels show through the lid as dark-framed light squares.
+    const revealMat = keep(new THREE.MeshBasicMaterial({ color: '#3b4044', side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
     const insetMat = keep(
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.42, 1.18), toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(1.5, 1.42, 1.18), side: THREE.DoubleSide, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     );
     const reveal = new THREE.InstancedMesh(plane, revealMat, panels.length);
     const inset = new THREE.InstancedMesh(plane, insetMat, panels.length);
@@ -158,7 +174,7 @@ class CeilingRig {
       m.raycast = () => {};
       this.group.add(m);
     }
-    this.fadeMats.push(revealMat, insetMat);
+    this.lightMats.push(revealMat, insetMat);
 
     // ---- garden skylight: translucent glass in a slim teal grid ----
     const hole = gardenHole();
@@ -214,13 +230,8 @@ class CeilingRig {
   private applyOpacity(appear: number): void {
     const o = this.opacity;
     const opaque = o >= 0.999;
-    for (const m of this.fadeMats) {
-      m.opacity = o;
-      if (m.transparent === opaque) {
-        m.transparent = !opaque;
-        m.depthWrite = opaque;
-      }
-    }
+    for (const m of this.fadeMats) setFade(m, o, opaque);
+    for (const m of this.lightMats) setFade(m, Math.min(1, o * LIGHT_BOOST), opaque);
     this.skylightMat.opacity = SKYLIGHT_OPACITY * appear;
   }
 

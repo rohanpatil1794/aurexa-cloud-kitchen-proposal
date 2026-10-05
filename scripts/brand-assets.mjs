@@ -1,4 +1,4 @@
-// Brand asset generator:  npm run assets   (idempotent; reads public/assets, writes public/brand + public)
+// Brand asset generator:  npm run assets   (idempotent; reads brand-src/, writes public/brand + public)
 //
 //   public/favicon.png (256), favicon-32.png, favicon.ico (16/32/48), apple-touch-icon.png (180)
 //   public/brand/mark.png, wordmark-{light,dark}.png, lockup-{light,dark}.png (+ lockup-tagline-*)
@@ -7,7 +7,9 @@
 // logo-light.png and logo-dark.png show the same mark on pure white and pure black. That is a
 // two-background matte: alpha = 1 - (white render - black render) / 255 and colour = black render / alpha,
 // which recovers the mark exactly, with no halo on any backdrop. The wordmark is single-ink, so its alpha
-// is the ink density. The originals in public/assets are only ever read.
+// is the ink density. The originals in brand-src/ are only ever read (they are not served or built).
+//
+// The og.png title line comes from KITCHEN_NAME in src/config.ts: re-run this script after changing it.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +17,7 @@ import sharp from 'sharp';
 import { loadPublicSans, measureText, textPath } from './lib/text-path.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = path.join(ROOT, 'public', 'assets');
+const SRC = path.join(ROOT, 'brand-src');
 const PUB = path.join(ROOT, 'public');
 const BRAND = path.join(PUB, 'brand');
 fs.mkdirSync(BRAND, { recursive: true });

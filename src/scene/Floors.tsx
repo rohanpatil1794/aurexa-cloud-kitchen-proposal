@@ -2,7 +2,8 @@
 // total), world-aligned procedural textures (src/scene/floorTextures.ts), per-vertex colour.
 //
 //  - Zone rooms (veg / jain / vegan / nonveg / creator) blend their base floor 55% towards the zone colour
-//    while store.layers.zones is on; the tint eases in and out when the layer toggles.
+//    while store.layers.zones is on; the tint eases in and out when the layer toggles. In Evening the blend is
+//    pushed further and the zone colour is made a little more saturated, so the dusk light cannot turn the five zones into similar browns.
 //  - A saturated threshold strip lies on the floor just inside each zone room's door, fading with the same layer.
 //  - Everything sits at FLOOR_Y, a hair above the plinth top (y = -0.01).
 import { useEffect, useMemo } from 'react';
@@ -20,10 +21,12 @@ export const FLOOR_Y = 0.02;
 export const STRIP_Y = FLOOR_Y + 0.012;
 
 const ZONE_MIX = 0.55;
+/** Extra zone tint (mix) and saturation at full Evening. */
+const EVENING_MIX = 0.3;
+const EVENING_SAT = 0.35;
 const STRIP_DEPTH = 0.5;
 /** Neighbouring floor rectangles overlap by this much so no hairline gap can appear on the shared edge. */
 const BLEED = 0.002;
-const EVENING_GLOW = new THREE.Color('#ff9a55');
 
 interface Rect { x: number; z: number; w: number; d: number }
 interface TintRef { zone: ZoneId; base: string; vertex: number; attr: THREE.BufferAttribute }
@@ -31,12 +34,20 @@ interface TintRef { zone: ZoneId; base: string; vertex: number; attr: THREE.Buff
 const _a = new THREE.Color();
 const _b = new THREE.Color();
 const _c = new THREE.Color();
-/** Mix two sRGB hex colours in sRGB space (what a designer expects from "55% towards the zone colour"), return linear. */
-function mixSRGB(out: THREE.Color, base: string, zone: string, k: number): THREE.Color {
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+/**
+ * Mix two sRGB hex colours in sRGB space (what a designer expects from "55% towards the zone colour"), return linear.
+ * `sat` > 0 first pushes the zone colour away from its own grey.
+ */
+function mixSRGB(out: THREE.Color, base: string, zone: string, k: number, sat: number): THREE.Color {
   _a.set(base).convertLinearToSRGB();
   _b.set(zone).convertLinearToSRGB();
+  const l = 0.2126 * _b.r + 0.7152 * _b.g + 0.0722 * _b.b;
+  _b.set(clamp01(l + (_b.r - l) * (1 + sat)), clamp01(l + (_b.g - l) * (1 + sat)), clamp01(l + (_b.b - l) * (1 + sat)));
   return out.copy(_a).lerp(_b, k).convertSRGBToLinear();
 }
+
 
 /** Axis-aligned rectangles -> one indexed BufferGeometry on the XZ plane (normals up, world-aligned UVs). */
 function rectGeometry(rects: Rect[], y: number, uvSpan: number, bleed = 0): THREE.BufferGeometry {
@@ -105,8 +116,6 @@ function buildFloors() {
       vertexColors: true,
       roughness: style.roughness,
       metalness: style.metalness,
-      emissive: EVENING_GLOW,
-      emissiveIntensity: 0,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
@@ -139,8 +148,8 @@ function buildFloors() {
 
 export function Floors() {
   const floors = useMemo(buildFloors, []);
-  // Eased zones-layer value. Starts at the layer's current state so a mount with zones on does not flash neutral.
-  const zonesT = useMemo(() => ({ v: -1 }), []);
+  // Eased zones-layer value (-1 = not yet set, so a mount with zones on does not flash neutral) and the Evening value it was painted for.
+  const zonesT = useMemo(() => ({ v: -1, e: 0 }), []);
 
   useEffect(() => () => {
     floors.parts.forEach((p) => { p.geo.dispose(); p.mat.dispose(); });
@@ -151,19 +160,22 @@ export function Floors() {
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.1);
     const goal = useStore.getState().layers.zones ? 1 : 0;
-    if (zonesT.v !== goal) {
+    const e = lightState.evening;
+    const toggling = zonesT.v !== goal;
+    if (toggling) {
       const snap = zonesT.v < 0 || useStore.getState().reducedMotion || Math.abs(zonesT.v - goal) < 0.002;
       zonesT.v = snap ? goal : THREE.MathUtils.damp(zonesT.v, goal, 6, dt);
-      for (const t of floors.tints) {
-        mixSRGB(_c, t.base, ZONES[t.zone].color, ZONE_MIX * zonesT.v);
-        for (let v = 0; v < 4; v++) t.attr.setXYZ(t.vertex + v, _c.r, _c.g, _c.b);
-      }
-      for (const attr of floors.tintAttrs) attr.needsUpdate = true;
       floors.stripMat.opacity = zonesT.v;
       floors.stripMat.visible = zonesT.v > 0.004;
     }
-    const glow = 0.035 * lightState.evening;
-    for (const p of floors.parts) if (p.mat.emissiveIntensity !== glow) p.mat.emissiveIntensity = glow;
+    if (toggling || (zonesT.v > 0 && zonesT.e !== e)) {
+      zonesT.e = e;
+      for (const t of floors.tints) {
+        mixSRGB(_c, t.base, ZONES[t.zone].color, (ZONE_MIX + EVENING_MIX * e) * zonesT.v, EVENING_SAT * e);
+        for (let v = 0; v < 4; v++) t.attr.setXYZ(t.vertex + v, _c.r, _c.g, _c.b);
+      }
+      for (const attr of floors.tintAttrs) attr.needsUpdate = true;
+    }
   });
 
   return (

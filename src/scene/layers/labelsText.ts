@@ -28,5 +28,32 @@ export const LABEL_LINES: Record<RoomId, readonly string[]> = {
   exit: ['Emergency', 'Exit Lobby'],
 };
 
+/** One short word or two per room for compact screens (phones), where 23 two-line pills would bury the model. */
+export const LABEL_SHORT: Record<RoomId, string> = {
+  stair: 'Stairs',
+  veg: 'Veg',
+  jain: 'Jain',
+  vegan: 'Vegan',
+  nonveg: 'Non-Veg',
+  bakery: 'Bakery',
+  cold: 'Cold',
+  dry: 'Dry',
+  lift: 'Lift',
+  recv: 'Receiving',
+  dessert: 'Dessert',
+  pack: 'Packing',
+  kitchen: 'Hot Kitchen',
+  dish: 'Dish',
+  dispatch: 'Dispatch',
+  rider: 'Riders',
+  waste: 'Waste',
+  garden: 'Garden',
+  lockers: 'Lockers',
+  elec: 'Electrical',
+  creator: 'Creator',
+  toilets: 'Toilets',
+  exit: 'Exit',
+};
+
 /** "168 sq ft" (same rounding as the room list). */
 export const areaLabel = (room: Room): string => `${Math.round(roomArea(room))} sq ft`;

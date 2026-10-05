@@ -1,10 +1,14 @@
 @import "tailwindcss";
-@import "@fontsource/public-sans/latin-300.css";
-@import "@fontsource/public-sans/latin-400.css";
-@import "@fontsource/public-sans/latin-500.css";
-@import "@fontsource/public-sans/latin-600.css";
-@import "@fontsource/public-sans/latin-700.css";
-@import "@fontsource/public-sans/latin-800.css";
+
+/* Public Sans, Latin subset, woff2 only (the .woff fallbacks that @fontsource/public-sans/latin-*.css
+   adds would only inflate dist). Weights: 300 stat numerals, 400 body, 500 labels, 600 headings, 700 / 800 signs
+   and the EXIT icon. vite.config.ts preloads 400 / 500 / 600 (the hero) from index.html. */
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 300; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-300-normal.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 400; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 500; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 600; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 700; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Public Sans"; font-style: normal; font-display: swap; font-weight: 800; src: url("../node_modules/@fontsource/public-sans/files/public-sans-latin-800-normal.woff2") format("woff2"); }
 
 /* Brand tokens (palette.png). Use as Tailwind utilities: bg-teal, text-orange, bg-cream, border-sand ... */
 @theme {
@@ -78,7 +82,7 @@ body {
 /* ---- owner: stage agent --------------------------------------------------- */
 
 /* Stage backdrop behind the transparent canvas: a touch lighter in the centre, fading to #070d0e.
-   --stage-mix eases 0 (day) -> 1 (evening) via the registered property, so the glow warms with the lighting toggle. */
+   --stage-mix eases 0 (day) -> 1 (evening) via the registered property, so the backdrop deepens to dusk blue with the lighting toggle. */
 @property --stage-mix {
   syntax: "<number>";
   inherits: true;
@@ -90,9 +94,9 @@ body {
   background:
     radial-gradient(
       ellipse 85% 78% at 50% 46%,
-      color-mix(in srgb, #12292b calc((1 - var(--stage-mix)) * 100%), #231d22) 0%,
-      color-mix(in srgb, #0c1a1c calc((1 - var(--stage-mix)) * 100%), #131017) 48%,
-      #070d0e 100%
+      color-mix(in srgb, #12292b calc((1 - var(--stage-mix)) * 100%), #1b2851) 0%,
+      color-mix(in srgb, #0c1a1c calc((1 - var(--stage-mix)) * 100%), #111b3b) 48%,
+      color-mix(in srgb, #070d0e calc((1 - var(--stage-mix)) * 100%), #070c1d) 100%
     );
 }
 .stage-canvas[data-lighting="evening"] { --stage-mix: 1; }
@@ -122,12 +126,14 @@ body {
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgb(246 227 194 / 0.62);
+    color: rgb(246 227 194 / 0.8); /* 4.5:1+ on the glass even over the brightest floors (was .62: 3.8:1) */
   }
 }
 .explorer-chip { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 .explorer-chip:hover { background: var(--color-orange); border-color: var(--color-orange); color: var(--color-ink); } /* ink: white on this orange is 3.9:1 */
 [data-explorer] button { -webkit-tap-highlight-color: transparent; }
+/* Touch screens of any width (tablets, landscape phones) get 44 px targets; mice keep the denser desktop sizes. */
+@media (pointer: coarse) { [data-explorer] :is(button, select):not(.sheet-handle) { min-height: 44px; } }
 [data-explorer] :focus-visible { outline: 2px solid var(--color-orange); outline-offset: 2px; }
 [data-explorer] select { color-scheme: dark; }
 /* Thin scrollbars; scroll chaining stops here so the page does not scroll under the sheet */
@@ -216,12 +222,11 @@ body {
   justify-content: space-between;
   gap: 24px;
   height: 100%;
-  max-width: 1680px;
-  margin: 0 auto;
   padding: var(--safe-top) clamp(16px, 3vw, 40px) 0;
 }
 
 .topbar-logo { position: relative; display: block; flex: none; height: 34px; aspect-ratio: 389 / 96; }
+.topbar-logo::before { content: ""; position: absolute; inset: -5px -8px; } /* 44 px tall hit area around the 34 px lockup */
 @media (min-width: 768px) { .topbar-logo { height: 40px; } }
 .topbar-logo-img { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.35s ease; }
 .topbar-logo-img--light { opacity: 0; }
@@ -262,6 +267,11 @@ body {
 .topbar[data-tone="light"] .topbar-link { color: rgba(12, 23, 24, 0.68); }
 .topbar[data-tone="light"] .topbar-link:hover,
 .topbar[data-tone="light"] .topbar-link[aria-current] { color: var(--color-ink); }
+
+@media (pointer: coarse) {
+  .topbar-link { padding: 17px 0; }
+  .topbar-link::after { bottom: 12px; }
+}
 
 /* Tablet widths: all six links plus the logo have to fit in 768 px */
 @media (min-width: 768px) and (max-width: 1023px) {
@@ -344,19 +354,24 @@ body {
 }
 .mobile-menu-motif { position: absolute; right: -22%; bottom: -4%; width: 82%; height: auto; opacity: 0.2; pointer-events: none; }
 
-/* Hero: scrim keeps the text legible over the model; mobile text sits at the bottom, so the scrim rises from there */
+/* The hero's side-by-side layout (text left, model right) needs a wide, landscape-ish screen: portrait tablets get the phone layout,
+   text at the bottom under the model. Used as `wide:` in ui/Hero.tsx. */
+@custom-variant wide (@media (min-width: 768px) and (min-aspect-ratio: 1/1));
+
+/* Hero: a feathered scrim behind the 30 rem text column (the model is framed to the right of it, see CameraRig's hero view offset);
+   mobile text sits at the bottom, so the scrim rises from there */
 .hero-scrim {
-  background:
-    radial-gradient(ellipse 58% 74% at 22% 52%, rgba(7, 13, 14, 0.92) 0%, rgba(7, 13, 14, 0.84) 40%, rgba(7, 13, 14, 0.45) 72%, rgba(7, 13, 14, 0) 100%),
-    linear-gradient(90deg, rgba(7, 13, 14, 0.7) 0%, rgba(7, 13, 14, 0.35) 40%, rgba(7, 13, 14, 0) 70%);
+  background: linear-gradient(90deg, rgba(7, 13, 14, 0.58) 0%, rgba(7, 13, 14, 0.5) 24%, rgba(7, 13, 14, 0.2) 42%, rgba(7, 13, 14, 0) 58%);
 }
-@media (max-width: 767px) {
+@media (max-width: 767px), (max-aspect-ratio: 1/1) {
   .hero-scrim {
     background: linear-gradient(0deg, rgba(7, 13, 14, 0.96) 0%, rgba(7, 13, 14, 0.86) 42%, rgba(7, 13, 14, 0.5) 58%, rgba(7, 13, 14, 0) 78%);
   }
 }
-/* While the hero is up the page must stay scrollable by touch: only horizontal drags orbit the model */
-#stage:has(.hero-root) canvas { touch-action: pan-y; }
+/* While the hero is up the page must stay scrollable by touch: only horizontal drags orbit the model.
+   camera-controls sets an inline touch-action: none on the wrapper div above the canvas, which wins over the canvas's own
+   value (the effective touch-action is the intersection along the ancestor chain), so the wrapper needs !important. */
+#stage:has(.hero-root) :is(canvas, .stage-canvas div) { touch-action: pan-y !important; }
 .hero-motif {
   position: absolute;
   left: -9vw;
@@ -368,13 +383,13 @@ body {
   mask-image: linear-gradient(90deg, #000 25%, transparent 95%);
   animation: hero-drift 26s ease-in-out infinite alternate;
 }
-@media (max-width: 767px) { .hero-motif { left: -30vw; bottom: -2vh; width: 110vw; } }
+@media (max-width: 767px), (max-aspect-ratio: 1/1) { .hero-motif { left: -30vw; bottom: -2vh; width: 110vw; } }
 @keyframes hero-drift {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(1.6vw, -1.4vh, 0); }
 }
 .hero-title {
-  font-size: clamp(1.75rem, 0.9rem + 2.5vw, 3.25rem);
+  font-size: clamp(1.75rem, 0.9rem + 1.5vw, 2.5rem);
   line-height: 1.14;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -410,10 +425,11 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 6px;
+  min-height: 44px;
+  padding: 0 6px;
   border: 0;
   background: none;
-  color: rgba(246, 227, 194, 0.62);
+  color: rgba(246, 227, 194, 0.7);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.22em;
@@ -429,13 +445,26 @@ body {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(5px); }
 }
-/* Landscape phones: headline, subline and CTA only, so the stack fits under the bar */
-@media (min-width: 768px) and (max-height: 560px) {
-  .hero-eyebrow, .hero-rule, .hero-hint { display: none; }
-  .hero-title { font-size: 1.75rem; }
-}
+/* No WebGL: the floor-plan fallback is the whole stage, so the hero and the explorer (nothing to drive) step aside */
+#stage:has(.webgl-fallback) :is(.hero-root, [data-explorer]) { display: none; }
 
-/* Loading splash: images only, so it paints before any web font */
+/* Short screens (landscape phones of any width, 400 % zoom): headline, subline and CTA only, left-aligned under the bar, with the
+   desktop scrim. These rules are unlayered, so they beat the Tailwind utilities on the same elements. */
+@media (max-height: 560px) {
+  .hero-col { justify-content: center; padding-top: calc(var(--topbar-h) + 0.5rem); padding-bottom: 1.25rem; padding-left: max(1.5rem, 6vw); text-align: left; }
+  .hero-col > div { margin-inline: 0; }
+  .hero-eyebrow, .hero-rule, .hero-hint { display: none; }
+  .hero-title { margin-top: 0; font-size: clamp(1.25rem, 3.2vw, 1.75rem); }
+  .hero-subline { margin-top: 0.75rem; font-size: 0.9375rem; }
+  .hero-cta-row { margin-top: 1rem; }
+  .hero-scrim { background: linear-gradient(90deg, rgba(7, 13, 14, 0.7) 0%, rgba(7, 13, 14, 0.55) 40%, rgba(7, 13, 14, 0) 80%); }
+  .hero-motif { left: -9vw; bottom: -16vh; width: min(58vw, 780px); }
+}
+@media (max-height: 400px) { .hero-subline { display: none; } }
+
+/* Loading splash: images only, so it paints before any web font. index.html carries the same markup inside
+   #root as a static boot screen (first paint, before any JS) and React's LoadingSplash replaces it in one
+   commit, so nothing here plays an entry animation (it would restart at the hand-over). */
 .splash {
   position: fixed;
   inset: 0;
@@ -448,8 +477,8 @@ body {
   background: radial-gradient(ellipse 85% 78% at 50% 46%, #12292b 0%, #0c1a1c 48%, #070d0e 100%);
 }
 .splash-logo { display: flex; flex-direction: column; align-items: center; gap: 22px; }
-.splash-mark { width: auto; height: clamp(88px, 14vh, 128px); animation: splash-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.splash-wordmark { width: clamp(170px, 22vw, 230px); height: auto; animation: splash-rise 0.9s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.splash-mark { width: auto; height: clamp(88px, 14vh, 128px); }
+.splash-wordmark { width: clamp(170px, 22vw, 230px); height: auto; }
 .splash-line {
   position: relative;
   width: 148px;
@@ -457,7 +486,6 @@ body {
   overflow: hidden;
   border-radius: 1px;
   background: rgba(246, 227, 194, 0.14);
-  animation: splash-rise 0.9s 0.35s ease both;
 }
 .splash-line::after {
   content: "";
@@ -466,10 +494,6 @@ body {
   width: 40%;
   background: linear-gradient(90deg, var(--color-teal), var(--color-orange));
   animation: splash-sweep 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-@keyframes splash-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
 }
 @keyframes splash-sweep {
   from { transform: translateX(-100%); }
@@ -588,6 +612,19 @@ body {
   transition: text-decoration-color 0.2s;
 }
 .prop-link:hover { text-decoration-color: currentColor; }
+
+/* A text link that is a 44px target: the anchor supplies the height (negative margin gives it back to the row);
+   the underline and the focus ring stay on the inner .prop-link text. */
+.prop-tap {
+  display: flex;
+  width: fit-content;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-block: -0.65rem;
+  outline: none;
+}
+.prop-tap:hover > .prop-link { text-decoration-color: currentColor; }
+.prop-tap:focus-visible > .prop-link { outline: 2px solid var(--prop-focus, var(--color-teal)); outline-offset: 3px; }
 
 /* A flow row that is also a button */
 .prop-row {

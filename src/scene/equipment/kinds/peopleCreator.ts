@@ -4,10 +4,10 @@ import { BRAND } from '../../../lib/palette';
 import { CHARCOAL, STEEL_DARK, roundTable } from '../../../lib/kit';
 import { KITCHEN_NAME } from '../../../config';
 import type { KindBuilder } from '../registry';
+import { BLACK } from './kindKit';
 import { GLOW } from './peopleShared';
 
 const TRIPOD = '#3a4349';
-const BLACK = '#14181b';
 
 /**
  * Free-standing feature wall: teal panel on a dark plinth, cream cap and keyline frame, timber slats

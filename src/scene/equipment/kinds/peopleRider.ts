@@ -3,9 +3,8 @@
 import { BRAND, ZONE_COLORS } from '../../../lib/palette';
 import { CHARCOAL, STEEL_DARK } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
+import { BLACK } from './kindKit';
 import { GLOW } from './peopleShared';
-
-const BLACK = '#14181b';
 
 /**
  * Bank of small charging lockers: grey steel carcass, teal doors, a tiny green charge LED on each,

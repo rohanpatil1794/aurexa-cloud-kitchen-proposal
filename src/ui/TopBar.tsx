@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { useIsMobile } from '../lib/hooks';
 import { STUDIO_NAME } from '../config';
 import { CubeMotif } from './CubeMotif';
+import { scrollToSection } from './nav';
 
 const LINKS = [
   { id: 'vision', label: 'Vision' },
@@ -149,11 +150,8 @@ export function TopBar() {
       history.replaceState(null, '', '#stage');
       return;
     }
-    const el = document.getElementById(id);
-    if (!el) return;
     // Section top flush under the bar (smooth via CSS scroll-behavior).
-    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (headerRef.current?.offsetHeight ?? 64) });
-    history.replaceState(null, '', `#${id}`);
+    if (scrollToSection(id)) history.replaceState(null, '', `#${id}`);
   }, []);
 
   const goTop = useCallback((e: MouseEvent) => {

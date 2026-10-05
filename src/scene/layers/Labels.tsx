@@ -9,22 +9,28 @@
 //    They fade in with a sweep across the plan when the explorer opens.
 //  - Fade by distance: orbit views show every label (they fade away only for near-horizontal views, where they
 //    would pile up); at eye level only nearby labels remain. The selected room's label always stays.
-//  - Overlaps: narrow neighbours are stacked / shifted on screen (Declutter); a pill with no free spot fades out.
+//  - Overlaps: narrow neighbours are stacked / shifted on screen (Declutter); a pill with no free spot fades out. The
+//    UI over the stage (anything marked data-label-obstacle: panel, sheet, room card, chips, legends) is a keep-out area.
+//  - Compact screens (phones, a narrow stage): one short word per room, small type, and rooms much smaller on screen than
+//    their pill shrink to a zone-coloured dot until they are hovered, tapped or selected, so the model stays readable.
 //  - Pills are buttons: hover lights the room (store.hoveredRoom), a click selects it.
-import { useCallback, useEffect, useMemo, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useFrame, useThree, type RootState } from '@react-three/fiber';
 import * as THREE from 'three';
-import { DESKTOP_MIN_WIDTH, PANEL_WIDTH } from '../../data/cameras';
+import type { FreeRect } from '../../data/cameras';
 import { FOOTPRINT, ROOMS, ZONES, roomArea, roomCenter } from '../../data/layout';
 import type { Room, RoomId } from '../../data/types';
 import { wallAnim } from '../../lib/wallAnim';
 import { useStore } from '../../store';
-import { Declutter, easeTo, pillPointer } from './labelsLayout';
-import { LABEL_LINES, areaLabel } from './labelsText';
+import { explorerFree, topBarHeight } from '../stageLayout';
+import { Declutter, MAX_OBSTACLES, easeTo, pillPointer } from './labelsLayout';
+import { LABEL_LINES, LABEL_SHORT, areaLabel } from './labelsText';
 import './labels.css';
 
 const N = ROOMS.length;
+/** Size of a room as it appears on screen scales with this (ft): the geometric mean of its sides. */
+const ROOM_SIZE = ROOMS.map((r) => Math.sqrt(r.w * r.d));
 const INDEX_OF = Object.fromEntries(ROOMS.map((r, i) => [r.id, i])) as Record<RoomId, number>;
 /** Visit order for overlap resolution: small rooms keep their spot (a pill that moves away from one is easily
  *  mistaken for its neighbour's), big rooms give way (their pills can drift and still sit over the room). */
@@ -57,14 +63,21 @@ const ENTER_FADE = 0.5;
 const OPACITY_STEPS = 50;
 /** Below this opacity a pill is hidden outright (and stops taking the pointer). */
 const HIDE_BELOW = 0.06;
-/** Narrower viewports get smaller pills. */
-const COMPACT_WIDTH = 640;
-/** Anchors this far outside the free screen area (px) are skipped; closer ones are pulled inside it. */
+/** A free stage area narrower than this (px) gets compact labels. */
+const COMPACT_WIDTH = 720;
+/** Compact only: a room whose size on screen is under MINI_IN x its pill's width shows a dot, until it exceeds MINI_OUT x. */
+const MINI_IN = 0.8;
+const MINI_OUT = 1;
+/** Side (px) of a dot, with its ring. */
+const MINI_SIZE = 15;
+/** Anchors this far outside the screen (px) are skipped; closer ones are pulled inside it. */
 const EDGE = 40;
-/** Space kept between pills and the screen edge / top bar / side panel, px. */
+/** Space kept between pills and the screen edge / top bar, px. */
 const MARGIN = 8;
-/** Mobile bottom sheet: fraction of the stage height it covers per state (twice CameraRig's SHEET_LIFT). */
-const SHEET_COVER = { peek: 0.14, half: 0.4, full: 0.4 } as const;
+/** Space kept around the UI over the stage, px (the declutter adds its own gap). */
+const OBSTACLE_PAD = 4;
+/** The UI over the stage is looked up again this often (frames); its rectangles are read every frame. */
+const OBSTACLE_REFRESH = 20;
 /** A pill moved further than this (px) from its room gets a stem down to the room's floor. */
 const STEM_MIN_OFFSET = 14;
 /** Height (ft) of a stem's foot: on the floor. */
@@ -79,10 +92,12 @@ const smoothstep = (a: number, b: number, x: number) => {
 const _dir = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
 const _p = new THREE.Vector3();
+const disconnected = (el: HTMLElement) => !el.isConnected;
 
 class LabelRig {
   host: HTMLElement | null = null;
   private readonly els: (HTMLElement | null)[] = new Array(N).fill(null);
+  private readonly pills: (HTMLElement | null)[] = new Array(N).fill(null);
   private readonly stems: (HTMLElement | null)[] = new Array(N).fill(null);
   private readonly anchor = new Float32Array(N * 2);
   private readonly floorX = new Float32Array(N);
@@ -90,6 +105,11 @@ class LabelRig {
   private readonly delay = new Float32Array(N);
   private readonly declutter = new Declutter(N);
   private readonly order = new Int32Array(N);
+  /** Full pill size (px, as last measured); per pill: a dot is wanted / a dot is set in the DOM (-1 = not written yet). */
+  private readonly pillW = new Float32Array(N).fill(DEFAULT_SIZE[0]);
+  private readonly pillH = new Float32Array(N).fill(DEFAULT_SIZE[1]);
+  private readonly mini = new Uint8Array(N);
+  private readonly miniDom = new Int8Array(N).fill(-1);
   /** Per pill: opacity before overlap hiding, eased 0..1 fade for "no free spot", and the eased offset in px. */
   private readonly goal = new Float32Array(N);
   private readonly unplaced = new Float32Array(N);
@@ -117,6 +137,9 @@ class LabelRig {
   private height = 0;
   /** Height of the fixed top bar (px): pills stay clear of it. */
   private topBar = 0;
+  private readonly free: FreeRect = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  private obstacleEls: HTMLElement[] = [];
+  private frame = 0;
   private readonly resize: ResizeObserver | null;
 
   constructor() {
@@ -128,25 +151,31 @@ class LabelRig {
       this.declutter.w[i] = DEFAULT_SIZE[0];
       this.declutter.h[i] = DEFAULT_SIZE[1];
     });
+    // Watches the full pills: they keep their size while a dot is shown.
     this.resize = typeof ResizeObserver === 'undefined'
       ? null
       : new ResizeObserver((entries) => {
           for (const e of entries) {
             const i = Number((e.target as HTMLElement).dataset.i);
-            this.declutter.w[i] = e.borderBoxSize?.[0]?.inlineSize ?? e.contentRect.width;
-            this.declutter.h[i] = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
+            this.pillW[i] = e.borderBoxSize?.[0]?.inlineSize ?? e.contentRect.width;
+            this.pillH[i] = e.borderBoxSize?.[0]?.blockSize ?? e.contentRect.height;
           }
         });
   }
 
   attach(i: number, el: HTMLElement | null): void {
-    const prev = this.els[i];
-    if (prev) this.resize?.unobserve(prev);
     this.els[i] = el;
     if (!el) return;
     this.lastX[i] = this.lastY[i] = NaN;
     this.lastOpacity[i] = this.lastZ[i] = -1;
-    this.resize?.observe(el);
+    this.miniDom[i] = -1;
+  }
+
+  attachPill(i: number, el: HTMLElement | null): void {
+    const prev = this.pills[i];
+    if (prev) this.resize?.unobserve(prev);
+    this.pills[i] = el;
+    if (el) this.resize?.observe(el);
   }
 
   attachStem(i: number, el: HTMLElement | null): void {
@@ -181,23 +210,27 @@ class LabelRig {
     if (W !== this.width || H !== this.height) {
       this.width = W;
       this.height = H;
-      this.topBar = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0;
+      if (this.host) this.topBar = topBarHeight(this.host);
     }
-    const compact = W < COMPACT_WIDTH;
+    // How much stage the explorer UI leaves decides whether the labels go compact.
+    explorerFree(W, H, s.sheet, this.topBar, this.free);
+    const compact = this.free.x1 - this.free.x0 < COMPACT_WIDTH;
     if (compact !== this.compact && this.host) {
       this.compact = compact;
       if (compact) this.host.setAttribute('data-compact', '');
       else this.host.removeAttribute('data-compact');
     }
-    // The part of the stage no UI covers: below the top bar, left of the explorer panel on desktop.
+    // Pills stay on the stage, below the top bar, and clear of every piece of UI over it.
     const dc = this.declutter;
     dc.minX = MARGIN;
     dc.minY = this.topBar + MARGIN;
-    dc.maxX = W - MARGIN - (explorer && W >= DESKTOP_MIN_WIDTH ? PANEL_WIDTH + MARGIN : 0);
-    dc.maxY = H - MARGIN - (explorer && W < DESKTOP_MIN_WIDTH ? H * SHEET_COVER[s.sheet] : 0);
+    dc.maxX = W - MARGIN;
+    dc.maxY = H - MARGIN;
+    this.readObstacles();
 
     cam.updateMatrixWorld();
     cam.getWorldDirection(_fwd);
+    const pxPerFtAtOne = H / (2 * Math.tan(((cam as THREE.PerspectiveCamera).fov * DEG) / 2));
     const y = wallAnim.h + (wallAnim.t > 0.02 ? CEILING : 0) + LIFT;
     const sinceEnter = state.clock.elapsedTime - this.enterAt - ENTER_DELAY;
     const selIndex = s.selectedRoom ? INDEX_OF[s.selectedRoom] : -1;
@@ -211,6 +244,7 @@ class LabelRig {
     this.dim = easeTo(this.dim, selIndex >= 0 ? 1 - smoothstep(FOCUS_NEAR, FOCUS_FAR, focusDist) : 0, 6, dt, reduced);
 
     // ---- project, fade ---------------------------------------------------------------------------------------
+    const free = this.free;
     for (let i = 0; i < N; i++) {
       const wx = this.anchor[i * 2], wz = this.anchor[i * 2 + 1];
       _dir.set(wx - cam.position.x, y - cam.position.y, wz - cam.position.z);
@@ -222,18 +256,25 @@ class LabelRig {
       _p.set(wx, STEM_FOOT_Y, wz).project(cam);
       this.floorX[i] = (_p.x * 0.5 + 0.5) * W;
       this.floorY[i] = (0.5 - _p.y * 0.5) * H;
-      const onScreen = inFront && sx > dc.minX - EDGE && sx < dc.maxX + EDGE && sy > dc.minY - EDGE && sy < dc.maxY + EDGE;
+      const onScreen = inFront && sx > free.x0 - EDGE && sx < free.x1 + EDGE && sy > free.y0 - EDGE && sy < free.y1 + EDGE;
 
       const orbit = smoothstep(ELEVATION_GONE, ELEVATION_FULL, Math.asin(THREE.MathUtils.clamp(-_dir.y / dist, -1, 1)));
       const look = 1 - smoothstep(LOOK_NEAR, LOOK_FAR, dist);
       let f = orbit + (look - orbit) * this.lookT;
-      if (i === selIndex || i === hovIndex) f = 1;
+      const pointed = i === selIndex || i === hovIndex;
+      if (pointed) f = 1;
       else {
         const apart = smoothstep(NEIGHBOUR_NEAR, NEIGHBOUR_FAR, Math.hypot(wx - this.focusX, wz - this.focusZ));
         f *= 1 - this.dim * (1 - this.lookT) * (DIM_NEAR + (DIM_FAR - DIM_NEAR) * apart);
       }
       const appear = reduced ? 1 : smoothstep(0, ENTER_FADE, sinceEnter - this.delay[i]);
       const want = onScreen ? this.master * appear * f : 0;
+
+      // Compact: a room much smaller on screen than its pill becomes a dot (with some hysteresis); pointed at, it is a pill.
+      const ratio = (ROOM_SIZE[i] * pxPerFtAtOne) / dist / this.pillW[i];
+      this.mini[i] = compact && !pointed && ratio < (this.mini[i] ? MINI_OUT : MINI_IN) ? 1 : 0;
+      dc.w[i] = this.mini[i] ? MINI_SIZE : this.pillW[i];
+      dc.h[i] = this.mini[i] ? MINI_SIZE : this.pillH[i];
 
       dc.x[i] = sx;
       dc.y[i] = sy;
@@ -251,6 +292,10 @@ class LabelRig {
     for (let i = 0; i < N; i++) {
       const el = this.els[i];
       if (!el) continue;
+      if (this.mini[i] !== this.miniDom[i]) {
+        this.miniDom[i] = this.mini[i];
+        el.toggleAttribute('data-mini', this.mini[i] === 1);
+      }
       this.unplaced[i] = easeTo(this.unplaced[i], dc.active[i] === 1 && !dc.placed[i] ? 1 : 0, 8, dt, reduced);
       const opacity = this.goal[i] * (1 - this.unplaced[i]);
       const hidden = opacity < HIDE_BELOW;
@@ -290,6 +335,28 @@ class LabelRig {
     }
   }
 
+  /** The UI over the stage (data-label-obstacle) as keep-out rectangles in layer px. */
+  private readObstacles(): void {
+    const dc = this.declutter;
+    if (this.frame++ % OBSTACLE_REFRESH === 0 || this.obstacleEls.some(disconnected)) {
+      this.obstacleEls = Array.from(document.querySelectorAll<HTMLElement>('[data-label-obstacle]')).slice(0, MAX_OBSTACLES);
+    }
+    const origin = this.host?.getBoundingClientRect();
+    let n = 0;
+    if (origin) {
+      for (const el of this.obstacleEls) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        dc.obstacles[n * 4] = r.left - origin.left - OBSTACLE_PAD;
+        dc.obstacles[n * 4 + 1] = r.top - origin.top - OBSTACLE_PAD;
+        dc.obstacles[n * 4 + 2] = r.right - origin.left + OBSTACLE_PAD;
+        dc.obstacles[n * 4 + 3] = r.bottom - origin.top + OBSTACLE_PAD;
+        n++;
+      }
+    }
+    dc.obstacleCount = n;
+  }
+
   /** Stem from the room's floor point (fx, fy) to the pill centre (cx, cy); `q` is its quantised opacity (0 = hidden). */
   private writeStem(i: number, q: number, fx: number, fy: number, cx: number, cy: number): void {
     const stem = this.stems[i];
@@ -320,38 +387,43 @@ function Pill({ room, index, rig }: { room: Room; index: number; rig: LabelRig }
   const hovered = useStore((s) => s.hoveredRoom === room.id);
   const selected = useStore((s) => s.selectedRoom === room.id);
   const ref = useCallback((el: HTMLDivElement | null) => rig.attach(index, el), [rig, index]);
+  const pillRef = useCallback((el: HTMLButtonElement | null) => rig.attachPill(index, el), [rig, index]);
   const zone = room.zone ? ZONES[room.zone] : null;
+  const color = zone ? ({ '--dot': zone.color } as CSSProperties) : undefined;
+  // The pill and the dot it shrinks to on compact screens are two faces of one control.
+  const face = {
+    type: 'button' as const,
+    tabIndex: -1,
+    'aria-label': room.name,
+    onPointerEnter: (e: ReactPointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      pillPointer.over = true;
+      useStore.getState().setHoveredRoom(room.id);
+    },
+    onPointerLeave: (e: ReactPointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      pillPointer.over = false;
+      const s = useStore.getState();
+      if (s.hoveredRoom === room.id) s.setHoveredRoom(null);
+    },
+    onClick: () => {
+      const s = useStore.getState();
+      s.goRoom(room.id, s.camera.mode === 'look' ? 'eye' : 'overview');
+    },
+  };
   return (
     <div ref={ref} className="lbl" data-i={index} data-hover={hovered || undefined} data-selected={selected || undefined}>
-      <button
-        type="button"
-        className="lbl-pill"
-        tabIndex={-1}
-        aria-label={room.name}
-        onPointerEnter={(e) => {
-          if (e.pointerType === 'touch') return;
-          pillPointer.over = true;
-          useStore.getState().setHoveredRoom(room.id);
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType === 'touch') return;
-          pillPointer.over = false;
-          const s = useStore.getState();
-          if (s.hoveredRoom === room.id) s.setHoveredRoom(null);
-        }}
-        onClick={() => {
-          const s = useStore.getState();
-          s.goRoom(room.id, s.camera.mode === 'look' ? 'eye' : 'overview');
-        }}
-      >
-        {zone && <i className="lbl-dot" style={{ '--dot': zone.color } as CSSProperties} />}
-        <span className="lbl-name">
+      <button ref={pillRef} data-i={index} className="lbl-pill" {...face}>
+        {zone && <i className="lbl-dot" style={color} />}
+        <span className="lbl-name lbl-name-full">
           {LABEL_LINES[room.id].map((line) => (
             <span key={line}>{line}</span>
           ))}
         </span>
+        <span className="lbl-name lbl-name-short">{LABEL_SHORT[room.id]}</span>
         <span className="lbl-area">{areaLabel(room)}</span>
       </button>
+      <button className="lbl-mini" style={color} {...face} />
     </div>
   );
 }

@@ -46,12 +46,27 @@ const grey = (v: number, warm = 0) => {
   return `rgb(${c},${Math.round(c * (1 - warm * 0.03))},${Math.round(c * (1 - warm * 0.08))})`;
 };
 
+/**
+ * One grey noise value in [-1, 1) per pixel, generated once and shared by every texture (each starts at its own
+ * offset, so no two floors show the same grain). Drawing it per texture from the seeded PRNG cost ~0.25 s at boot.
+ */
+let noise: Float32Array | null = null;
+function grain(): Float32Array {
+  if (noise) return noise;
+  const rand = rng(1013);
+  noise = new Float32Array(SIZE * SIZE);
+  for (let i = 0; i < noise.length; i++) noise[i] = rand() * 2 - 1;
+  return noise;
+}
+
 /** Per-pixel noise added on top of what is already drawn (tiles perfectly: no spatial correlation). */
 function speckle(ctx: CanvasRenderingContext2D, rand: () => number, amount: number) {
   const img = ctx.getImageData(0, 0, SIZE, SIZE);
   const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (rand() - 0.5) * 2 * amount;
+  const g = grain();
+  const start = Math.floor(rand() * g.length);
+  for (let i = 0, k = start; i < d.length; i += 4, k = k + 1 === g.length ? 0 : k + 1) {
+    const n = g[k] * amount;
     d[i] += n; d[i + 1] += n; d[i + 2] += n;
   }
   ctx.putImageData(img, 0, 0);
@@ -213,24 +228,26 @@ const garden: Painter = (ctx, rand) => {
   speckle(ctx, rand, 10);
 };
 
-const PAINTERS: Record<FloorMaterialKind, { paint: Painter; seed: number }> = {
+const PAINTERS: Record<FloorKind, { paint: Painter; seed: number }> = {
   quarry: { paint: quarry, seed: 11 },
   steel: { paint: steel, seed: 23 },
   concrete: { paint: concrete, seed: 37 },
   cream: { paint: cream, seed: 41 },
   timber: { paint: timber, seed: 53 },
   garden: { paint: garden, seed: 67 },
-  circulation: { paint: cream, seed: 79 },
 };
 
-const cache = new Map<FloorMaterialKind, THREE.CanvasTexture>();
+const cache = new Map<FloorKind, THREE.CanvasTexture>();
 
-export function floorTexture(kind: FloorMaterialKind): THREE.CanvasTexture {
+export function floorTexture(material: FloorMaterialKind): THREE.CanvasTexture {
+  // Circulation is the same polished cream as the cream rooms: one texture, so the tile joints run on through the doors.
+  const kind: FloorKind = material === 'circulation' ? 'cream' : material;
   let tex = cache.get(kind);
   if (tex) return tex;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = SIZE;
-  const ctx = canvas.getContext('2d')!;
+  // Every painter ends in getImageData: a CPU-backed canvas skips the GPU read-back.
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   const { paint, seed } = PAINTERS[kind];
   paint(ctx, rng(seed));
   tex = new THREE.CanvasTexture(canvas);

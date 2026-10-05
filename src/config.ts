@@ -15,11 +15,11 @@ export const HERO = {
 
 // Placeholder contact details for the Next steps band.
 export const CONTACT = {
-  person: '[Contact Name], Principal Designer',
+  person: '[Contact Name], [Role]',
   email: 'hello@aurexa.example',
   phone: '+00 00000 00000',
   address: '[Studio address line 1], [City]',
-  hours: 'Mon–Sat, 10:00–18:00',
+  hours: '[Opening hours]',
 } as const;
 
 export const FLOORPLAN_URL = '/assets/floorplan.png';

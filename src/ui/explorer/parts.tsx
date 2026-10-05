@@ -5,8 +5,9 @@ import { useStore } from '../../store';
 import { ZONES } from '../../data/layout';
 import type { ZoneId } from '../../data/types';
 
-export function MicroHeading({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h3 className={`micro ${className}`}>{children}</h3>;
+/** A wide-tracked group heading: an h2 by default (the page's one h1 is the hero title), h3 when it sits under a room's name. */
+export function MicroHeading({ children, className = '', as: Tag = 'h2' }: { children: ReactNode; className?: string; as?: 'h2' | 'h3' }) {
+  return <Tag className={`micro ${className}`}>{children}</Tag>;
 }
 
 /** Zone colour dot; renders a blank slot of the same size for rooms without a zone, so names stay aligned. */
@@ -101,7 +102,7 @@ export function SwitchRow({
       <span className="grid w-7 shrink-0 place-items-center text-cream/80">{mark}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-[14px] font-medium leading-tight text-cream">{name}</span>
-        <span className="mt-0.5 block text-[12px] leading-snug text-cream/65">{meaning}</span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-cream/72">{meaning}</span>
       </span>
       <span
         aria-hidden

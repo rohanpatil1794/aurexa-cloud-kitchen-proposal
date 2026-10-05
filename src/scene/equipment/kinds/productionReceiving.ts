@@ -2,7 +2,9 @@
 import type { KindBuilder } from '../registry';
 import { BRAND, BIN_COLORS } from '../../../lib/palette';
 import { STEEL_DARK, bench, bin, crate } from '../../../lib/kit';
-import { INK, PANEL, PANEL_LIGHT, pick, seeded } from './productionParts';
+import { pick, rng } from '../rng';
+import { INK } from './kindKit';
+import { PANEL, PANEL_LIGHT } from './productionParts';
 
 const AMBER = '#ffb35a';
 const CRATE_TONES = ['#b9854a', '#a9753e', '#8f9a55', '#c47a35'] as const;
@@ -24,7 +26,7 @@ const floorScale: KindBuilder = (b, it) => {
 /** Half pallet carrying two layers of crates; the top layer is topped with produce. */
 const palletCrates: KindBuilder = (b, it) => {
   const { w, d } = it;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   for (const z of [-d / 2 + 0.11, 0, d / 2 - 0.11]) b.box({ m: 'matte', c: '#9c7142', z, w, h: 0.22, d: 0.22 });
   b.box({ m: 'matte', c: '#b88c55', y: 0.22, w, h: 0.08, d });
   const cw = (w - 0.1) / 2, cd = (d - 0.1) / 2;

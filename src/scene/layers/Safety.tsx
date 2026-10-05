@@ -286,6 +286,8 @@ class SafetyRig {
         if (m.transparent === opaque) {
           m.transparent = !opaque;
           m.depthWrite = opaque;
+          // three bakes `transparent` into the program (OPAQUE ignores the alpha), so the flip needs a recompile
+          m.needsUpdate = true;
         }
       }
       for (const m of this.labels) m.opacity = next;

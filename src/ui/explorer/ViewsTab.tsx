@@ -4,7 +4,8 @@ import { PRESET_LABELS } from '../../data/cameras';
 import { ROOMS_GROUPED, ROOM_BY_ID } from '../../data/layout';
 import type { PresetId, RoomId } from '../../data/types';
 import { pickPreset, pickRoom } from './actions';
-import { ChevronDownIcon, EyeLevelIcon, OverviewIcon, PresetIcon } from './icons';
+import { ChevronDownIcon, PresetIcon } from './icons';
+import { roomViewOptions } from './InfoCard';
 import { MicroHeading, Segmented } from './parts';
 
 const PRESET_ROWS: { id: PresetId; caption: string }[] = [
@@ -41,24 +42,27 @@ function RoomSelect({ value, onChange }: { value: RoomId | null; onChange: (id: 
   );
 }
 
-/** How to move the camera, worded for the visitor's input device (the mappings live in scene/CameraRig.tsx). */
+/**
+ * How to move the camera, worded for the visitor's input device (the mappings live in scene/CameraRig.tsx, the wheel in
+ * ui/ExplorerUI.tsx). With a mouse the wheel keeps scrolling the page; zooming takes Ctrl / Cmd (or a trackpad pinch).
+ */
 function ControlsHint() {
   const touch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const rows = touch
     ? [['Drag', 'Orbit'], ['Pinch', 'Zoom'], ['Two fingers', 'Pan']]
-    : [['Drag', 'Orbit'], ['Scroll', 'Zoom'], ['Right-drag', 'Pan']];
+    : [['Drag', 'Orbit'], ['Right-drag', 'Pan'], ['Scroll', 'Down the page'], ['Ctrl / ⌘ + scroll', 'Zoom']];
   return (
-    <section aria-label="Camera controls">
+    <div>
       <MicroHeading className="mb-2 px-0.5">Controls</MicroHeading>
-      <dl className="grid grid-cols-3 gap-2">
+      <dl className={`grid gap-2 ${touch ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {rows.map(([how, what]) => (
           <div key={how} className="rounded-xl bg-black/20 px-3 py-2.5">
-            <dt className="text-[11.5px] leading-tight text-cream/60">{how}</dt>
+            <dt className="text-[11.5px] leading-tight text-cream/70">{how}</dt>
             <dd className="mt-0.5 text-[13px] font-medium text-cream">{what}</dd>
           </div>
         ))}
       </dl>
-    </section>
+    </div>
   );
 }
 
@@ -70,7 +74,7 @@ export function ViewsTab() {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Camera views">
+      <div>
         <MicroHeading className="mb-2 px-0.5">Camera</MicroHeading>
         <div className="grid grid-cols-2 gap-2">
           {PRESET_ROWS.map(({ id, caption }) => {
@@ -90,15 +94,15 @@ export function ViewsTab() {
                 <PresetIcon id={id} size={20} />
                 <span>
                   <span className="block text-[14px] font-medium leading-tight">{PRESET_LABELS[id]}</span>
-                  <span className={`mt-0.5 block text-[11.5px] leading-snug ${on ? 'text-ink' : 'text-cream/60'}`}>{caption}</span>
+                  <span className={`mt-0.5 block text-[11.5px] leading-snug ${on ? 'text-ink' : 'text-cream/70'}`}>{caption}</span>
                 </span>
               </button>
             );
           })}
         </div>
-      </section>
+      </div>
 
-      <section aria-label="Inside a room" className="space-y-3">
+      <div className="space-y-3">
         <MicroHeading className="px-0.5">Inside a room</MicroHeading>
         {!room && <p className="px-0.5 text-[13px] leading-snug text-cream/70">Pick a room to look around inside it.</p>}
         <RoomSelect value={selectedRoom} onChange={(id) => pickRoom(id, roomView)} />
@@ -107,13 +111,10 @@ export function ViewsTab() {
             label="Room view"
             value={roomView}
             onChange={(v) => pickRoom(room.id, v)}
-            options={[
-              { value: 'overview', label: 'Overview', icon: <OverviewIcon size={15} /> },
-              { value: 'eye', label: 'Eye-level', icon: <EyeLevelIcon size={15} /> },
-            ]}
+            options={roomViewOptions}
           />
         )}
-      </section>
+      </div>
 
       <ControlsHint />
     </div>

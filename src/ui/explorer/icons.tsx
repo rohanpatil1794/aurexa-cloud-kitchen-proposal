@@ -51,6 +51,15 @@ export const ChevronRightIcon = (p: IconProps) => (
 export const ChevronDownIcon = (p: IconProps) => (
   <Icon {...p}><path d="m5.5 9.5 6.5 6.5 6.5-6.5" /></Icon>
 );
+export const ChevronUpIcon = (p: IconProps) => (
+  <Icon {...p}><path d="m5.5 14.5 6.5-6.5 6.5 6.5" /></Icon>
+);
+export const CloseIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M6 6l12 12M18 6 6 18" /></Icon>
+);
+export const InfoIcon = (p: IconProps) => (
+  <Icon {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.8h.01" /></Icon>
+);
 
 // ---- camera presets -----------------------------------------------------------------------------
 const PRESET_ICONS: Record<PresetId, (p: IconProps) => ReactElement> = {

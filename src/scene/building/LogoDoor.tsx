@@ -1,4 +1,4 @@
-// The Staff Entrance as THE LOGO DOOR (public/assets/logo-light.png): deep teal leaf with raised panels
+// The Staff Entrance as THE LOGO DOOR (brand-src/logo-light.png): deep teal leaf with raised panels
 // and a half-round fan-light, a chunky cream surround, brass knob, terracotta step and a potted plant.
 // The wall model leaves the opening frameless; this component fills it. It deliberately stands proud
 // of the 3.5 ft dollhouse walls (the frame is 7.8 ft) and sits in front of the wall in full-height mode.
@@ -83,8 +83,8 @@ export function LogoDoor() {
       <mesh geometry={p.geo.step} material={p.mat.terracotta} position={[0, step.h / 2, face + step.d / 2 - 0.02]} castShadow receiveShadow />
       <mesh geometry={p.geo.pot} material={p.mat.terracotta} position={[POT.x, 0, POT.z]} castShadow receiveShadow />
 
-      {/* the leaf, hinged on the west jamb and standing ajar, swung inward */}
-      <group position={[leaf.hingeX, 0, leaf.hingeZ]} rotation={[0, leaf.angle * DEG, 0]}>
+      {/* the leaf, hinged on the east jamb and standing ajar, swung inward (see SPEC.leaf) */}
+      <group position={[leaf.hingeX, 0, leaf.hingeZ]} rotation={[0, (180 - leaf.angle) * DEG, 0]}>
         <mesh geometry={p.geo.leaf} material={p.mat.teal} castShadow receiveShadow />
         <mesh geometry={p.geo.glass} material={p.mat.glass} />
       </group>

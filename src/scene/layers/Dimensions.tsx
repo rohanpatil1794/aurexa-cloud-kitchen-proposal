@@ -1,12 +1,14 @@
 // Dimensions layer: the overall 60 ft (south edge) and 50 ft (west edge) dimension lines in an architect's hand:
 // a thin cream line, extension lines and oblique 45 degree end ticks, with the figure in a small pill that breaks the
 // line. They frame the near corner of the aerial and both stay inside the plan view. The south line is pushed clear of
-// the pickup apron.
+// the pickup apron. The figures stay inside the part of the screen no UI covers, so on a phone a pill never clips at the
+// screen edge or hides under the bar, the side panel or the bottom sheet.
 import { useEffect, useRef, useState, type ElementRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { FOOTPRINT, PICKUP_ZONE, WALL } from '../../data/layout';
+import { DESKTOP_MIN_WIDTH, PANEL_WIDTH, SHEET_LIFT } from '../../data/cameras';
 import type { Vec3 } from '../../data/types';
 import { BRAND } from '../../lib/palette';
 import { useStore } from '../../store';
@@ -24,6 +26,14 @@ const TICK = 0.65;
 const Y = 0.05;
 const LINE_OPACITY = 0.9;
 const FADE_RATE = 9;
+/** Pills keep this far (px) from the screen edge, top bar, side panel and sheet; one whose anchor is further outside is hidden. */
+const MARGIN = 8;
+const OUTSIDE = 60;
+/** Half the size of a pill (px) on wide and on compact (phone) screens; compact screens use the smaller type of max-sm. */
+const HALF = { wide: [34, 12], compact: [28, 10] } as const;
+const COMPACT_WIDTH = 640;
+const OFF_SCREEN: [number, number] = [-9999, -9999];
+const _p = new THREE.Vector3();
 
 /** Line segments as consecutive point pairs. */
 function dimensionSegments(): Vec3[] {
@@ -46,6 +56,32 @@ function dimensionSegments(): Vec3[] {
   return out;
 }
 const SEGMENTS = dimensionSegments();
+
+/** Height of the fixed top bar, px (it changes with the viewport width, so it is re-read when the canvas size changes). */
+let barPx = 0;
+let barFor = 0;
+const topBar = ({ width, height }: { width: number; height: number }) => {
+  if (barFor !== width * 8192 + height) {
+    barFor = width * 8192 + height;
+    barPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0;
+  }
+  return barPx;
+};
+
+/** Where a pill is drawn (drei Html `calculatePosition`): its anchor on screen, pulled inside the free part of the screen. */
+function pillPosition(el: THREE.Object3D, camera: THREE.Camera, size: { width: number; height: number }): [number, number] {
+  _p.setFromMatrixPosition(el.matrixWorld).project(camera);
+  const x = (_p.x * 0.5 + 0.5) * size.width, y = (0.5 - _p.y * 0.5) * size.height;
+  const { phase, sheet } = useStore.getState();
+  const explorer = phase === 'explorer';
+  const desktop = size.width >= DESKTOP_MIN_WIDTH;
+  const [hw, hh] = size.width < COMPACT_WIDTH ? HALF.compact : HALF.wide;
+  const minX = MARGIN + hw, minY = topBar(size) + MARGIN + hh;
+  const maxX = Math.max(minX, size.width - MARGIN - hw - (explorer && desktop ? PANEL_WIDTH + MARGIN : 0));
+  const maxY = Math.max(minY, size.height - MARGIN - hh - (explorer && !desktop ? size.height * 2 * SHEET_LIFT[sheet] : 0));
+  if (x < minX - OUTSIDE || x > maxX + OUTSIDE || y < minY - OUTSIDE || y > maxY + OUTSIDE) return OFF_SCREEN;
+  return [THREE.MathUtils.clamp(x, minX, maxX), THREE.MathUtils.clamp(y, minY, maxY)];
+}
 
 /** True while `on`, and for `ms` after it turns off (so a fade-out can finish before unmounting). */
 function useMountedWhile(on: boolean, ms: number): boolean {
@@ -70,7 +106,7 @@ function Pill({ label }: { label: string }) {
   }, [on]);
   return (
     <div
-      className="select-none whitespace-nowrap rounded-full border border-cream/45 bg-[rgba(8,22,23,0.78)] px-3 py-1 text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-cream"
+      className="select-none whitespace-nowrap rounded-full border border-cream/45 bg-[rgba(8,22,23,0.78)] px-3 py-1 text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-cream max-sm:px-2 max-sm:text-[9px] max-sm:tracking-[0.16em]"
       style={{ opacity: shown ? 1 : 0, transition: 'opacity 350ms ease' }}
     >
       {label}
@@ -101,10 +137,10 @@ export function Dimensions() {
   return (
     <group name="dimensions">
       <Line ref={line} points={SEGMENTS} segments lineWidth={1.5} color={BRAND.cream} transparent opacity={0} depthWrite={false} />
-      <Html position={[FOOTPRINT.w / 2, Y, SOUTH_Z]} center pointerEvents="none" zIndexRange={[20, 0]}>
+      <Html position={[FOOTPRINT.w / 2, Y, SOUTH_Z]} center pointerEvents="none" zIndexRange={[20, 0]} calculatePosition={pillPosition}>
         <Pill label={`${FOOTPRINT.w} ft`} />
       </Html>
-      <Html position={[WEST_X, Y, FOOTPRINT.d / 2]} center pointerEvents="none" zIndexRange={[20, 0]}>
+      <Html position={[WEST_X, Y, FOOTPRINT.d / 2]} center pointerEvents="none" zIndexRange={[20, 0]} calculatePosition={pillPosition}>
         <Pill label={`${FOOTPRINT.d} ft`} />
       </Html>
     </group>

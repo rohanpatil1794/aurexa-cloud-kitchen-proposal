@@ -6,7 +6,9 @@ import type { PrimBuilder } from '../../../lib/prims';
 import { BRAND } from '../../../lib/palette';
 import { CHARCOAL, STEEL_DARK, bin as zoneBin, plant, wallShelf } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
-import { SATIN_STEEL, rng, tint, tub } from './prepKit';
+import { rng } from '../rng';
+import { tint } from './kindKit';
+import { SATIN_STEEL, tub } from './prepKit';
 
 const zoneOf = (it: EquipItem) => it.color ?? BRAND.teal;
 const TOP = 3; // work-surface height, ft

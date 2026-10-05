@@ -1,4 +1,5 @@
-// Camera-path API for the scroll-driven walkthrough (stub wired end to end, no path authored yet).
+// Camera-path API for the scroll-driven walkthrough (stub wired end to end, no path authored yet). The sampler is also what
+// CameraRig flies the crane moves into, between and out of eye level along (it keeps its own clock there).
 //
 //   import { cameraPath } from './scene/cameraPath';
 //   cameraPath.start({ keyframes: [{ position, target }, ...] });  // CameraRig takes over the camera

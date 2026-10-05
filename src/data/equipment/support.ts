@@ -1,5 +1,5 @@
 // Equipment items for the "support" group: Waste Management, Dishwashing, Staff Lockers, Electrical & UPS,
-// Toilets, the Fire Staircase and the Passenger Lift. Kind builders live in src/scene/equipment/kinds/support*.ts.
+// Toilets, the Emergency Exit Lobby, the Fire Staircase and the Passenger Lift. Kind builders live in src/scene/equipment/kinds/support*.ts.
 //
 // Positions are the item's plan CENTRE (see `put`); w / d are LOCAL sizes, so an item rotated 90 / 270 swaps
 // them in plan. Walls are 0.5 ft thick (outer 0.75), so every item stops 0.25 ft (0.375 outer) short of the
@@ -84,17 +84,31 @@ const ELEC: EquipItem[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Toilets (x 54-60, z 40-46, 6 x 6 ft). Door W@z43. The 3 x 3 ft door zone stays free, so the four cubicles (two male,
-// two female) share the east strip and the basins sit on the north and south strips.
+// Toilets (x 54-60, z 40-46, 6 x 6 ft). Door W@z43. The 3 x 3 ft door zone stays free, so one male and one female cubicle
+// (2.6 x 2.6 ft each) share the east strip and the basins sit on the north and south strips.
 // ---------------------------------------------------------------------------
 const TOILETS: EquipItem[] = [
   put('toilets-bank', 'toilets', 'support.toiletBank', 58.3, 43.05, 5.2, 2.6, {
-    rot: 270, h: 6.2, label: 'Cubicles (2 male, 2 female)', props: { n: 4, split: 2 },
+    rot: 270, h: 6.2, label: 'Cubicles (1 male, 1 female)', props: { n: 2, split: 1 },
   }),
   put('toilets-vanity-n', 'toilets', 'support.vanity', 55.85, 40.825, 2.1, 1.05, { h: 2.9, label: 'Basins and mirrors' }),
   put('toilets-vanity-s', 'toilets', 'support.vanity', 55.85, 45.175, 2.1, 1.05, { rot: 180, h: 2.9, label: 'Basins and mirrors' }),
   put('toilets-dryer-n', 'toilets', 'support.dryer', 54.425, 40.8, 0.8, 0.35, { rot: 90, label: 'Hand dryer' }),
   put('toilets-dryer-s', 'toilets', 'support.dryer', 54.425, 45.2, 0.8, 0.35, { rot: 90, label: 'Hand dryer' }),
+];
+
+// ---------------------------------------------------------------------------
+// Emergency Exit Lobby (x 54-60, z 46-50, 6 x 4 ft). Doors W@z48 and the outward-opening emergency door S@57. The two 3 x 3 ft
+// door zones take most of the floor, so the dressing is decals (boot mat, escape-route line, hazard strip on the threshold)
+// plus a boot bench, apron hooks and a FIRE EXIT KEEP CLEAR plate on the east wall strip and the north wall.
+// ---------------------------------------------------------------------------
+const EXIT: EquipItem[] = [
+  put('exit-mat', 'exit', 'support.doorMat', 54.95, 48, 1.2, 1.4, { props: FLAT }),
+  put('exit-route', 'exit', 'support.escapeRoute', 56.375, 48.56, 1.45, 1.28, { props: FLAT }),
+  put('exit-hazard', 'exit', 'production.hazardStripe', 57, 49.4, 2.8, 0.35, { props: FLAT }),
+  put('exit-bench', 'exit', 'support.lockerBench', 59.15, 47.45, 2.2, 0.95, { rot: 270, h: 1.5, label: 'Boot bench' }),
+  put('exit-aprons', 'exit', 'support.apronRail', 59.525, 47.45, 2.2, 0.2, { rot: 270, label: 'Apron hooks', props: { overlap: true } }),
+  put('exit-plate', 'exit', 'support.keepClear', 58.3, 46.3, 2, 0.1, { label: 'Fire exit keep clear plate' }),
 ];
 
 // ---------------------------------------------------------------------------
@@ -113,4 +127,4 @@ const LIFT: EquipItem[] = [
   }),
 ];
 
-export const SUPPORT_EQUIPMENT: EquipItem[] = [...WASTE, ...DISH, ...LOCKERS, ...ELEC, ...TOILETS, ...STAIR, ...LIFT];
+export const SUPPORT_EQUIPMENT: EquipItem[] = [...WASTE, ...DISH, ...LOCKERS, ...ELEC, ...TOILETS, ...EXIT, ...STAIR, ...LIFT];

@@ -2,7 +2,9 @@
 import type { KindBuilder } from '../registry';
 import { BRAND, SCENE } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
-import { INK, KRAFT, TEAL_DEEP, WOOD, bag, pick, seeded } from './productionParts';
+import { pick, rng } from '../rng';
+import { INK } from './kindKit';
+import { KRAFT, TEAL_DEEP, WOOD, bag } from './productionParts';
 
 /** Stainless hand-over counter with a teal front panel facing the riders; staged bags, a POS screen and a bell on top. */
 const handoverCounter: KindBuilder = (b, it) => {
@@ -37,7 +39,7 @@ const bagRack: KindBuilder = (b, it) => {
   const h = it.h ?? 4.3;
   const bays = Math.max(1, Math.round(w / 1.9));
   const bw = w / bays;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   for (let i = 0; i <= bays; i++) for (const sz of [-1, 1]) {
     b.box({ m: 'steel', c: STEEL_DARK, x: -w / 2 + 0.05 + (i * (w - 0.1)) / bays, z: sz * (d / 2 - 0.05), w: 0.1, h, d: 0.1 });
   }
@@ -62,7 +64,7 @@ const bagRack: KindBuilder = (b, it) => {
 const orderBoard: KindBuilder = (b, it) => {
   const { w } = it;
   const h = it.h ?? 2;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   b.frame({ y: 4.9 }, () => {
     b.box({ m: 'matte', c: '#2a373c', w, h, d: 0.12 });
     b.box({ m: 'emissive', c: '#0b3a3a', y: 0.08, z: 0.065, w: w - 0.16, h: h - 0.16, d: 0.01 });

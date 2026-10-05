@@ -3,8 +3,9 @@
 import { bench, crate } from '../../../lib/kit';
 import { BIN_COLORS, BRAND } from '../../../lib/palette';
 import type { KindBuilder } from '../registry';
+import { INK, tint } from './kindKit';
 import {
-  castor, CERAMIC_SOILED, floorPlate, INK, shade, stack, STEEL, STEEL_DARK, STEEL_MID, TROLLEY_TOPS, trolleyFrame, trays,
+  castor, CERAMIC_SOILED, floorPlate, stack, STEEL, STEEL_DARK, STEEL_MID, TROLLEY_TOPS, trolleyFrame, trays,
 } from './supportKit';
 
 const BIN_ORDER = ['yellow', 'green', 'teal', 'blue', 'grey', 'red'] as const;
@@ -19,8 +20,8 @@ const wasteBins: KindBuilder = (b, it) => {
     const c = BIN_COLORS[name];
     const bw = pitch - 0.14;
     b.box({ m: 'gloss', c, x, y: 0.2, z: wall + 0.55, w: bw, h: 2.15, d: 1.0 });
-    b.box({ m: 'gloss', c: shade(c, 0.18), x, y: 2.35, z: wall + 0.55, w: bw + 0.06, h: 0.12, d: 1.08, shadow: false });
-    b.box({ m: 'gloss', c: shade(c, -0.14), x, y: 0.7, z: wall + 1.06, w: bw - 0.3, h: 1.1, d: 0.03, shadow: false });
+    b.box({ m: 'gloss', c: tint(c, 0.18), x, y: 2.35, z: wall + 0.55, w: bw + 0.06, h: 0.12, d: 1.08, shadow: false });
+    b.box({ m: 'gloss', c: tint(c, -0.14), x, y: 0.7, z: wall + 1.06, w: bw - 0.3, h: 1.1, d: 0.03, shadow: false });
     b.box({ m: 'matte', c: INK, x, y: 2.18, z: wall + 0.07, w: bw - 0.25, h: 0.07, d: 0.09, shadow: false });
     for (const sx of [-1, 1]) {
       b.cyl({ m: 'matte', c: INK, x: x + sx * (bw / 2 - 0.08), y: 0.12, z: wall + 0.2, r: 0.17, h: 0.1, rz: 90, shadow: false });

@@ -3,7 +3,9 @@ import type { PrimBuilder } from '../../../lib/prims';
 import type { KindBuilder } from '../registry';
 import { BRAND } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
-import { INK, KRAFT, PANEL_LIGHT, bag, pick, rodX, seeded } from './productionParts';
+import { pick, rng } from '../rng';
+import { INK } from './kindKit';
+import { KRAFT, PANEL_LIGHT, bag, rodX } from './productionParts';
 
 const WHITE_BOX = '#d9d2c0';
 const STOCK = [...KRAFT, WHITE_BOX, BRAND.teal] as const;
@@ -87,7 +89,7 @@ const packShelf: KindBuilder = (b, it) => {
   const h = it.h ?? 6.2;
   const bays = Math.max(1, Math.round(w / 3.4));
   const bw = w / bays;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   for (let i = 0; i <= bays; i++) for (const sz of [-1, 1]) {
     b.box({ m: 'steel', c: STEEL_DARK, x: -w / 2 + 0.06 + (i * (w - 0.12)) / bays, z: sz * (d / 2 - 0.06), w: 0.12, h, d: 0.12 });
   }
@@ -115,7 +117,7 @@ const packShelf: KindBuilder = (b, it) => {
 /** Wall-mounted double shelf (above bench height) holding rolls and cartons. Front is local +z. */
 const packWallShelf: KindBuilder = (b, it) => {
   const { w, d } = it;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   for (const y of [4.3, 5.4]) {
     b.box({ m: 'steel', c: STEEL, y, w, h: 0.07, d });
     for (let j = 0; j < 4; j++) b.box({ m: 'steel', c: STEEL_DARK, x: -w / 2 + 0.3 + (j * (w - 0.6)) / 3, y: y - 0.4, z: -d / 2 + 0.04, w: 0.06, h: 0.4, d: 0.5, shadow: false });

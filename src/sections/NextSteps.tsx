@@ -14,16 +14,25 @@ const STEPS: { title: string; detail: string }[] = [
 const MAIL_SUBJECT = encodeURIComponent(`Aurexa × ${KITCHEN_NAME} proposal`);
 const PHONE_HREF = `tel:${CONTACT.phone.replace(/[^\d+]/g, '')}`;
 
+function TapLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a className="prop-tap" href={href}>
+      <span className="prop-link">{children}</span>
+    </a>
+  );
+}
+
+// dt and dd are the only children of the row div (valid dl grouping); the icon sits inside the dt so it stays decorative.
 function ContactRow({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div className="flex items-start gap-4 py-3.5">
-      <span aria-hidden="true" className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-cream/12 text-sand">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-cream/75">{label}</dt>
-        <dd className="mt-1 break-words text-[1.0625rem] leading-snug text-cream">{children}</dd>
-      </div>
+    <div className="relative py-3.5 pl-[3.25rem]">
+      <dt className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-cream/90">
+        <span aria-hidden="true" className="absolute left-0 top-4 grid size-9 place-items-center rounded-full bg-cream/12 text-sand">
+          {icon}
+        </span>
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-[1.0625rem] leading-snug text-cream">{children}</dd>
     </div>
   );
 }
@@ -66,10 +75,10 @@ export function NextSteps() {
               <dl className="mt-3 divide-y divide-cream/15">
                 <ContactRow icon={<UserIcon className="size-[1.1rem]" />} label="Contact">{CONTACT.person}</ContactRow>
                 <ContactRow icon={<MailIcon className="size-[1.1rem]" />} label="Email">
-                  <a className="prop-link" href={`mailto:${CONTACT.email}?subject=${MAIL_SUBJECT}`}>{CONTACT.email}</a>
+                  <TapLink href={`mailto:${CONTACT.email}?subject=${MAIL_SUBJECT}`}>{CONTACT.email}</TapLink>
                 </ContactRow>
                 <ContactRow icon={<PhoneIcon className="size-[1.1rem]" />} label="Phone">
-                  <a className="prop-link" href={PHONE_HREF}>{CONTACT.phone}</a>
+                  <TapLink href={PHONE_HREF}>{CONTACT.phone}</TapLink>
                 </ContactRow>
                 <ContactRow icon={<PinIcon className="size-[1.1rem]" />} label="Studio">{CONTACT.address}</ContactRow>
                 <ContactRow icon={<ClockIcon className="size-[1.1rem]" />} label="Hours">{CONTACT.hours}</ContactRow>

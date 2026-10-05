@@ -293,7 +293,7 @@ section('7. Wall geometry');
 // ---- 8. workflow flows (src/data/flows.ts) -----------------------------------------------------------------
 import { segmentHitsBox, wallCrossings } from '../src/scene/building/wallModel';
 import { FLOWS, FLOW_RIBBON, pathLength } from '../src/data/flows';
-import { roundPath } from '../src/scene/layers/flowsGeometry';
+import { RIBBON_STEP, floorObstacles, flowRibbons, growthAlong, roundPath, subdividePath } from '../src/scene/layers/flowsGeometry';
 import { DISH_STAGES, PICKUP_ZONE } from '../src/data/layout';
 
 section('8. Flow paths');
@@ -334,6 +334,35 @@ section('8. Flow paths');
       }
     });
     if (!hits) ok(`${f.id}: ribbon edges and rounded corners clear all walls and door jambs`);
+  }
+
+  // 8b2. far views (a phone) draw a ribbon up to FLOW_RIBBON.maxGrow times wider where the lane beside it leaves room:
+  //       at that width it must still clear every wall and door jamb
+  {
+    let hits = 0, widest = 1, widened = 0, steps = 0;
+    for (const f of FLOWS) {
+      const limits = { halfWidth: hw, avoid: FLOWS.filter((o) => o !== f).flatMap((o) => o.paths), obstacles: floorObstacles(Y), gap: FLOW_RIBBON.growGap, max: FLOW_RIBBON.maxGrow };
+      for (const { points } of flowRibbons(f.paths, { width: FLOW_RIBBON.width, radius: FLOW_RIBBON.radius, fade: 0 })) {
+        // the renderer's vertices (every RIBBON_STEP ft) each carry their own widening; the edges run straight between them
+        const pts = subdividePath(points, RIBBON_STEP);
+        const grow = growthAlong(pts, limits);
+        for (let i = 0; i + 1 < pts.length && hits < 3; i++) {
+          const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+          const l = Math.hypot(bx - ax, bz - az);
+          if (l < 1e-6) continue;
+          steps++; widest = Math.max(widest, grow[i]); if (grow[i] > 1.2) widened++;
+          const ux = (bz - az) / l, uz = -(bx - ax) / l;
+          for (const side of [-1, 1]) {
+            const p0: [number, number] = [ax + side * ux * hw * grow[i], az + side * uz * hw * grow[i]];
+            const p1: [number, number] = [bx + side * ux * hw * grow[i + 1], bz + side * uz * hw * grow[i + 1]];
+            if (wallBoxesIntersectSegment(p0, p1, Y).length > 0 || jambs.some((b) => segmentHitsBox(p0, p1, Y, b))) {
+              hits++; fail(`${f.id}: the ribbon widened ${grow[i].toFixed(2)}x touches a wall or jamb near ${fmt([ax, az].map((v) => +v.toFixed(2)))}`); break;
+            }
+          }
+        }
+      }
+    }
+    if (!hits) ok(`ribbons widened up to ${widest.toFixed(2)}x (${widened} of ${steps} steps wider than 1.2x) still clear all walls and door jambs`);
   }
 
   // 8c. no two flows share a lane: parallel stretches of different paths are at least one lane apart

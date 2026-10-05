@@ -1,8 +1,8 @@
 // Kind builders for the Electrical & UPS Room: UPS cabinets, wall distribution boards, cable tray, rubber mat.
 import type { KindBuilder } from '../registry';
-import { floorPlate, INK, STEEL, STEEL_DARK, TRAY_Y } from './supportKit';
+import { INK, num } from './kindKit';
+import { floorPlate, STEEL, STEEL_DARK, TRAY_Y } from './supportKit';
 
-const num = (v: unknown, d = 0) => (typeof v === 'number' ? v : d);
 const LED_GREEN = '#35e58a';
 const LED_AMBER = '#ffb23a';
 
@@ -23,7 +23,7 @@ const ups: KindBuilder = (b, it) => {
 
 /** Wall-mounted distribution board with a breaker window, status LEDs and a label. Local back (-z) = wall. */
 const panel: KindBuilder = (b, it) => {
-  const y0 = num(it.props?.y0, 1.8), h = it.h ?? 3.6, wall = -it.d / 2;
+  const y0 = num(it, 'y0', 1.8), h = it.h ?? 3.6, wall = -it.d / 2;
   b.box({ m: 'matte', c: '#8a959e', y: y0, z: wall + 0.15, w: it.w, h, d: 0.3 });
   b.box({ m: 'matte', c: '#a6b0b8', y: y0 + 0.1, z: wall + 0.31, w: it.w - 0.14, h: h - 0.2, d: 0.03, shadow: false });
   b.sign({ text: String(it.props?.tag ?? ''), y: y0 + h - 0.35, z: wall + 0.33, w: 0.7, h: 0.2, fg: '#ffffff', bg: INK });

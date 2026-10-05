@@ -16,7 +16,7 @@ const TABS: { id: PanelTab; label: string; icon: ReactNode }[] = [
 const tabId = (t: PanelTab) => `explorer-tab-${t}`;
 const panelId = (t: PanelTab) => `explorer-panel-${t}`;
 
-export function TabBar({ onSelect }: { onSelect?: (t: PanelTab) => void }) {
+export function TabBar({ onSelect, className = 'h-12' }: { onSelect?: (t: PanelTab) => void; className?: string }) {
   const tab = useStore((s) => s.panelTab);
   const setPanelTab = useStore((s) => s.setPanelTab);
   const reduced = useStore((s) => s.reducedMotion);
@@ -38,7 +38,7 @@ export function TabBar({ onSelect }: { onSelect?: (t: PanelTab) => void }) {
   };
 
   return (
-    <div role="tablist" aria-label="Explorer sections" onKeyDown={onKeyDown} className="flex h-12 shrink-0 px-2">
+    <div role="tablist" aria-label="Explorer sections" onKeyDown={onKeyDown} className={`flex shrink-0 px-2 ${className}`}>
       {TABS.map((t) => {
         const on = t.id === tab;
         return (
@@ -49,7 +49,7 @@ export function TabBar({ onSelect }: { onSelect?: (t: PanelTab) => void }) {
             role="tab"
             id={tabId(t.id)}
             aria-selected={on}
-            aria-controls={panelId(t.id)}
+            aria-controls={on ? panelId(t.id) : undefined}
             tabIndex={on ? 0 : -1}
             onClick={() => select(t.id)}
             className={`micro relative flex flex-1 items-center justify-center gap-2 rounded-lg transition-colors hover:text-cream ${on ? 'text-cream' : ''}`}

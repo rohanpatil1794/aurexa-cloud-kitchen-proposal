@@ -1,23 +1,29 @@
 {
   "name": "aurexa-cloud-kitchen-proposal",
+  "description": "Walkable 3D proposal for a 3,000 sq ft cloud kitchen and office, by Aurexa Design Consultants. Static Vite + React + three.js site, everything procedural.",
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate-layout.ts",
-    "assets": "node scripts/brand-assets.mjs && tsx scripts/make-floorplan.mjs",
-    "shot": "node scripts/shot.mjs",
     "validate:equipment": "tsx scripts/validate-equipment.ts",
-    "validate:all": "npm run validate && npm run validate:equipment"
+    "validate:all": "npm run validate && npm run validate:equipment",
+    "check": "npm run validate:all && npm run build",
+    "assets": "node scripts/brand-assets.mjs && tsx scripts/make-floorplan.mjs",
+    "shot": "node scripts/shot.mjs"
   },
   "dependencies": {
     "@fontsource/public-sans": "^5.3.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "camera-controls": "^2.10.1",
     "framer-motion": "^12.43.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

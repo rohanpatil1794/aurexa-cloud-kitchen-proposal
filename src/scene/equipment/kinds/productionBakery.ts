@@ -2,7 +2,9 @@
 import type { KindBuilder } from '../registry';
 import { BRAND } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
-import { INK, PANEL, TEAL_DEEP, pick, rodX, seeded } from './productionParts';
+import { pick, rng } from '../rng';
+import { INK } from './kindKit';
+import { PANEL, TEAL_DEEP, rodX } from './productionParts';
 
 const DOUGH = '#e2c58f';
 const CRUST = ['#b8793e', '#c58a4a', '#a96a35'] as const;
@@ -93,7 +95,7 @@ const spiralMixer: KindBuilder = (b, it) => {
 const workTable: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 3;
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   b.box({ m: 'matte', c: '#e4d9c1', y: h - 0.14, w, h: 0.14, d });
   const lx = w / 2 - 0.12, lz = d / 2 - 0.12;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.box({ m: 'steel', c: STEEL_DARK, x: sx * lx, z: sz * lz, w: 0.1, h: h - 0.14, d: 0.1 });
@@ -129,7 +131,7 @@ const rollRack: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 5.8;
   const load = String(it.props?.load ?? '');
-  const rnd = seeded(it.id);
+  const rnd = rng(it.id);
   const px = w / 2 - 0.05, pz = d / 2 - 0.05;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     b.box({ m: 'steel', c: STEEL_DARK, x: sx * px, z: sz * pz, y: 0.3, w: 0.1, h: h - 0.3, d: 0.1 });

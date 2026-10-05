@@ -42,7 +42,7 @@ function makeParts() {
     dash: dashedRectGeometry(ZONE_RECT),
     dashMat: new THREE.MeshStandardMaterial({ color: PAINT_ORANGE, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
     decalMats: DECALS.map(decalMaterial),
-    deckMat: new THREE.MeshStandardMaterial({ color: '#d4ebe8', roughness: 0.15, transparent: true, opacity: 0.18, depthWrite: false }),
+    deckMat: new THREE.MeshStandardMaterial({ color: '#e6f1ec', roughness: 0.2, transparent: true, opacity: 0.5, depthWrite: false }),
   };
 }
 

@@ -3,7 +3,9 @@ import type { PrimBuilder } from '../../../lib/prims';
 import { BRAND, ZONE_COLORS } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
-import { SATIN_STEEL, rng, tint, tub } from './prepKit';
+import { rng } from '../rng';
+import { tint } from './kindKit';
+import { SATIN_STEEL, tub } from './prepKit';
 
 const LABEL_INK = '#12302f';
 

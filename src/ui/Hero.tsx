@@ -2,6 +2,7 @@ import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { useStore } from '../store';
 import { CLIENT_NAME, HERO, STUDIO_NAME } from '../config';
 import { CubeMotif } from './CubeMotif';
+import { scrollToProposal } from './nav';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -36,13 +37,11 @@ function Subline() {
   );
 }
 
-function scrollToProposal() {
-  const target = document.getElementById('vision');
-  if (target) target.scrollIntoView({ block: 'start' });
-  else window.scrollTo({ top: window.innerHeight });
-}
-
-/** Overlay on the stage while phase === 'hero'. The wrappers ignore the pointer so the model stays draggable. */
+/**
+ * Overlay on the stage while phase === 'hero'. The wrappers ignore the pointer so the model stays draggable.
+ * The page's one <h1> is screen-reader-only and always present (the visible title is decoration), so the heading
+ * outline survives once the hero is gone.
+ */
 export function Hero() {
   const phase = useStore((s) => s.phase);
   const reducedMotion = useStore((s) => s.reducedMotion);
@@ -50,58 +49,61 @@ export function Hero() {
   const child = reducedMotion ? reducedItem : item;
 
   return (
-    <AnimatePresence>
-      {phase === 'hero' && (
-        <motion.div
-          key="hero"
-          className="hero-root pointer-events-none absolute inset-0 z-10"
-          variants={reducedMotion ? reducedContainer : container}
-          initial="hidden"
-          animate="show"
-          exit="exit"
-        >
-          <div className="hero-scrim absolute inset-0" aria-hidden="true" />
-          <CubeMotif variant="outline" tone="dark" className="hero-motif" />
+    <>
+      <h1 className="sr-only">{HERO.headline}</h1>
+      <AnimatePresence>
+        {phase === 'hero' && (
+          <motion.div
+            key="hero"
+            className="hero-root pointer-events-none absolute inset-0 z-10"
+            variants={reducedMotion ? reducedContainer : container}
+            initial="hidden"
+            animate="show"
+            exit="exit"
+          >
+            <div className="hero-scrim absolute inset-0" aria-hidden="true" />
+            <CubeMotif variant="outline" tone="dark" className="hero-motif" />
 
-          <div className="relative flex h-full flex-col justify-end px-6 pb-28 text-center md:justify-center md:px-0 md:pb-12 md:pl-[max(2.5rem,6vw)] md:text-left">
-            <div className="mx-auto max-w-[34rem] md:mx-0 md:max-w-[46rem]">
-              <motion.div variants={child} className="hero-eyebrow flex items-center justify-center gap-3.5 md:justify-start">
-                <img src="/brand/mark.png" width={600} height={615} alt="" className="h-11 w-auto select-none md:h-12" draggable={false} />
-                <span aria-hidden="true" className="h-7 w-px bg-cream/25" />
-                <span className="text-[11px] font-medium uppercase tracking-[0.26em] text-cream/75">{STUDIO_NAME}</span>
-              </motion.div>
+            <div className="hero-col relative flex h-full flex-col justify-end px-6 pb-28 text-center wide:justify-center wide:px-0 wide:pb-12 wide:pl-[max(2.5rem,6vw)] wide:text-left">
+              <div className="mx-auto max-w-[34rem] wide:mx-0 wide:max-w-[30rem]">
+                <motion.div variants={child} className="hero-eyebrow flex items-center justify-center gap-3.5 wide:justify-start">
+                  <img src="/brand/mark.png" width={600} height={615} alt="" className="h-11 w-auto select-none wide:h-12" draggable={false} />
+                  <span aria-hidden="true" className="h-7 w-px bg-cream/25" />
+                  <span className="text-[11px] font-medium uppercase tracking-[0.26em] text-cream/75">{STUDIO_NAME}</span>
+                </motion.div>
 
-              <motion.h1 variants={child} className="hero-title mt-6 text-balance md:mt-8">
-                {HERO.headline}
-              </motion.h1>
+                <motion.p variants={child} aria-hidden="true" className="hero-title mt-6 text-balance wide:mt-8">
+                  {HERO.headline}
+                </motion.p>
 
-              <motion.span variants={child} className="hero-rule mx-auto mt-6 block h-0.5 w-12 bg-orange md:mx-0" aria-hidden="true" />
+                <motion.span variants={child} className="hero-rule mx-auto mt-6 block h-0.5 w-12 bg-orange wide:mx-0" aria-hidden="true" />
 
-              <motion.p variants={child} className="mt-5 text-balance text-base leading-relaxed text-cream/85 md:max-w-[34rem] md:text-lg">
-                <Subline />
-              </motion.p>
+                <motion.p variants={child} className="hero-subline mt-5 text-balance text-base leading-relaxed text-cream/85 wide:max-w-[28rem] wide:text-[1.0625rem]">
+                  <Subline />
+                </motion.p>
 
-              <motion.div variants={child} className="mt-8 md:mt-10">
-                <button type="button" onClick={enterSpace} className="hero-cta pointer-events-auto">
-                  <span>{HERO.cta}</span>
-                  <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M3 10h13M11 5l5 5-5 5" />
-                  </svg>
-                </button>
-              </motion.div>
+                <motion.div variants={child} className="hero-cta-row mt-8 wide:mt-10">
+                  <button type="button" onClick={enterSpace} className="hero-cta pointer-events-auto">
+                    <span>{HERO.cta}</span>
+                    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 10h13M11 5l5 5-5 5" />
+                    </svg>
+                  </button>
+                </motion.div>
+              </div>
             </div>
-          </div>
 
-          <motion.div variants={child} className="absolute inset-x-0 bottom-6 flex justify-center md:justify-start md:pl-[max(2.5rem,6vw)]">
-            <button type="button" onClick={scrollToProposal} className="hero-hint pointer-events-auto">
-              <span>Scroll for the proposal</span>
-              <svg className="hero-hint-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M4 7.5l6 6 6-6" />
-              </svg>
-            </button>
+            <motion.div variants={child} className="absolute inset-x-0 bottom-3 flex justify-center wide:justify-start wide:pl-[max(2.5rem,6vw)]">
+              <button type="button" onClick={scrollToProposal} className="hero-hint pointer-events-auto">
+                <span>Scroll for the proposal</span>
+                <svg className="hero-hint-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M4 7.5l6 6 6-6" />
+                </svg>
+              </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

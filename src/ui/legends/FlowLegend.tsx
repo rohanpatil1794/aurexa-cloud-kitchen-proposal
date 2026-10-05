@@ -28,7 +28,7 @@ export function FlowLegend({ variant = 'floating', className = '' }: { variant?:
   const shell = variant === 'floating' ? 'glass explorer-glass explorer-card pointer-events-auto w-[320px] max-w-full px-4 py-3.5' : 'w-full';
   return (
     <section aria-label="Workflow legend" className={`${shell} ${className}`}>
-      <h3 className="micro mb-2.5">Workflows</h3>
+      <h2 className="micro mb-2.5">Workflows</h2>
       <ul className="space-y-2">
         {FLOWS.map((f) => {
           const on = layers[f.id];
@@ -41,7 +41,7 @@ export function FlowLegend({ variant = 'floating', className = '' }: { variant?:
                   <span className="sr-only">{on ? ' (shown)' : ' (hidden)'}</span>
                 </p>
                 <div aria-hidden={!on} className={`grid transition-[grid-template-rows] duration-300 ${on ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                  <p className="overflow-hidden text-[12px] leading-snug text-cream/70">
+                  <p className="overflow-hidden text-[12px] leading-snug text-cream/80">
                     <span className="block pt-0.5">{f.summary}</span>
                   </p>
                 </div>

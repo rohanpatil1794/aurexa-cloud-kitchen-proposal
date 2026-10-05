@@ -24,8 +24,8 @@ function hookFonts() {
   if (fontHooked || typeof document === 'undefined' || !document.fonts) return;
   fontHooked = true;
   const redrawAll = () => redraws.forEach((fn) => fn());
-  document.fonts.load('700 48px "Public Sans"').then(redrawAll).catch(() => {});
-  document.fonts.load('500 48px "Public Sans"').then(redrawAll).catch(() => {});
+  // 700 is the default sign weight, 800 the EXIT / GAS / name-plate signs, 500 the small second line.
+  for (const weight of [500, 700, 800]) document.fonts.load(`${weight} 48px "Public Sans"`).then(redrawAll).catch(() => {});
   document.fonts.ready.then(redrawAll).catch(() => {});
 }
 
@@ -70,6 +70,18 @@ function draw(canvas: HTMLCanvasElement, o: TextTexOpts) {
 
   lines.forEach((ln, i) => drawTracked(ln, lineH * (i + 0.5) + (hasSub ? 0 : 0), lineH, W * 0.9, weight));
   if (hasSub && o.sub) drawTracked(o.sub, mainH + (H - mainH) / 2, H - mainH, W * 0.9, 500);
+}
+
+/** Draw `o` into an existing canvas (the sign atlas packs many signs into one texture). */
+export { draw as drawTextCanvas };
+
+/** Call `fn` each time the web font finishes loading (the first draw may have used the fallback face). Returns the unsubscribe. */
+export function onTextFontLoaded(fn: () => void): () => void {
+  hookFonts();
+  redraws.add(fn);
+  return () => {
+    redraws.delete(fn);
+  };
 }
 
 export function getTextTexture(o: TextTexOpts): THREE.CanvasTexture {

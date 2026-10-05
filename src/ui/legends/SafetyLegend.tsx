@@ -67,9 +67,10 @@ const ICONS: Record<SafetyKind, ReactElement> = {
   ),
 };
 
-function Icon({ kind }: { kind: SafetyKind }) {
+/** One marker icon; `className` sets its size. */
+export function SafetyMarker({ kind, className = 'size-6 md:size-7' }: { kind: SafetyKind; className?: string }) {
   return (
-    <svg aria-hidden viewBox="0 0 28 28" className="size-6 shrink-0 md:size-7">
+    <svg aria-hidden viewBox="0 0 28 28" className={`shrink-0 ${className}`}>
       {ICONS[kind]}
     </svg>
   );
@@ -80,12 +81,12 @@ export function SafetyLegend({ variant = 'floating', className = '' }: { variant
   const shell = floating ? 'glass explorer-glass explorer-card pointer-events-auto w-[300px] max-w-full px-4 py-3.5' : 'w-full';
   return (
     <section aria-label="Safety legend" className={`${shell} ${className}`}>
-      <h3 className="micro mb-2.5">Fire &amp; safety</h3>
+      <h2 className="micro mb-2.5">Fire &amp; safety</h2>
       {/* Floating: two compact columns with short labels on phones, one column of full labels from md up. */}
       <ul className={floating ? 'grid grid-cols-2 gap-x-3 gap-y-1.5 md:grid-cols-1' : 'space-y-2.5'}>
         {SAFETY_KINDS.map((k) => (
           <li key={k.kind} className="flex min-w-0 items-center gap-2 md:gap-3">
-            <Icon kind={k.kind} />
+            <SafetyMarker kind={k.kind} />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] font-semibold leading-tight text-cream md:text-[13px]">
                 {floating ? (
@@ -99,7 +100,7 @@ export function SafetyLegend({ variant = 'floating', className = '' }: { variant
               </p>
               {!floating && <p className="mt-0.5 text-[12px] leading-snug text-cream/70">{k.detail}</p>}
             </div>
-            <span className="text-[12px] font-semibold tabular-nums text-cream/70 md:text-[13px]">{SAFETY_COUNTS[k.kind]}</span>
+            <span className="text-[12px] font-semibold tabular-nums text-cream/85 md:text-[13px]">{SAFETY_COUNTS[k.kind]}</span>
           </li>
         ))}
       </ul>

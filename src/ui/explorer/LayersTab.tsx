@@ -35,7 +35,7 @@ export function LayersTab() {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Scene" className="space-y-2.5">
+      <div className="space-y-2.5">
         <Segmented
           label="Walls"
           value={wallMode}
@@ -54,9 +54,9 @@ export function LayersTab() {
             { value: 'evening', label: 'Evening', icon: <MoonIcon size={15} /> },
           ]}
         />
-      </section>
+      </div>
 
-      <section aria-label="Workflows">
+      <div>
         <MicroHeading className="mb-1.5 px-2.5">Workflows</MicroHeading>
         <div className="space-y-0.5">
           {FLOWS.map((f) => (
@@ -70,9 +70,9 @@ export function LayersTab() {
             />
           ))}
         </div>
-      </section>
+      </div>
 
-      <section aria-label="Overlays">
+      <div>
         <MicroHeading className="mb-1.5 px-2.5">Overlays</MicroHeading>
         <div className="space-y-0.5">
           {OVERLAY_ROWS.map((o) => (
@@ -86,7 +86,7 @@ export function LayersTab() {
             />
           ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

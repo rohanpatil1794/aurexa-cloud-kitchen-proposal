@@ -10,6 +10,7 @@ import type { PrimBuilder } from '../../../lib/prims';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
 import type { EquipItem } from '../../../data/types';
 import { registerKinds } from '../registry';
+import { num, str, tint } from './kindKit';
 import { COPPER, IRON, TOP, WOK_STEEL, WOOD, cabinet, cloche, openBench, pan, pot } from './kitchenIslandsParts';
 
 const CLAY = '#a8501f';
@@ -30,19 +31,6 @@ const CEILING = 10;
 
 /** Unit vectors (x, z) to the three pot rests around a wok burner. */
 const WOK_RESTS: [number, number][] = [[0, 1], [-0.866, -0.5], [0.866, -0.5]];
-
-const _tint = new THREE.Color();
-/** An accent darkened for lit floor surfaces (the key light washes pale tones out). */
-const deepen = (hex: string, factor: number) => `#${_tint.set(hex).multiplyScalar(factor).getHexString()}`;
-
-const num = (it: EquipItem, key: string, fallback: number) => {
-  const v = it.props?.[key];
-  return typeof v === 'number' ? v : fallback;
-};
-const str = (it: EquipItem, key: string, fallback: string) => {
-  const v = it.props?.[key];
-  return typeof v === 'string' ? v : fallback;
-};
 
 /** Closed cabinet (north) + open prep bench with undershelf (south 2 ft) for a 6 ft deep island. */
 function islandBase(b: PrimBuilder, it: EquipItem, seed: number) {
@@ -237,7 +225,8 @@ registerKinds({
     const { w, d } = it;
     const strip = num(it, 'strip', 1.5);
     const padW = num(it, 'padW', w);
-    const accent = deepen(it.color ?? BRAND.teal, 0.6);
+    // darkened for lit floor surfaces: the key light washes pale tones out
+    const accent = tint(it.color ?? BRAND.teal, -0.4);
     const fg = str(it, 'fg', BRAND.cream);
     b.box({ m: 'matte', c: accent, x: -w / 2 + padW / 2, y: 0.03, z: -strip / 2, w: padW, h: 0.025, d: d - strip, shadow: false });
     b.box({ m: 'matte', c: accent, y: 0.03, z: d / 2 - strip / 2, w, h: 0.025, d: strip, shadow: false });

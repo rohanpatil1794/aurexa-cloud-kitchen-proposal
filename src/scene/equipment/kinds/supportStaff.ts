@@ -1,13 +1,12 @@
 // Kind builders for the Staff Lockers room: locker rows, changing bench and door mat.
 import { BRAND } from '../../../lib/palette';
 import type { KindBuilder } from '../registry';
-import { floorPlate, INK, STEEL, STEEL_DARK } from './supportKit';
-
-const num = (v: unknown, d = 0) => (typeof v === 'number' ? v : d);
+import { INK, num } from './kindKit';
+import { floorPlate, STEEL, STEEL_DARK } from './supportKit';
 
 /** Row of tall steel lockers (teal and grey doors, vents, number plates). Local front (+z) faces the room. */
 const lockers: KindBuilder = (b, it) => {
-  const n = num(it.props?.n, 5), first = num(it.props?.first, 1), alt = num(it.props?.alt);
+  const n = num(it, 'n', 5), first = num(it, 'first', 1), alt = num(it, 'alt', 0);
   const pitch = it.w / n, h = it.h ?? 6, f = it.d / 2;
   b.box({ m: 'matte', c: INK, w: it.w, h: 0.25, d: it.d - 0.1, shadow: false });
   for (let i = 0; i < n; i++) {

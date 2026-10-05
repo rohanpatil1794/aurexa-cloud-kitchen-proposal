@@ -2,7 +2,8 @@
 import { BRAND } from '../../../lib/palette';
 import type { PrimBuilder } from '../../../lib/prims';
 import type { KindBuilder } from '../registry';
-import { INK, STEEL, STEEL_DARK } from './supportKit';
+import { INK } from './kindKit';
+import { STEEL, STEEL_DARK } from './supportKit';
 
 // Stair geometry (ft): riser, tread run, flight width, and the rail / stringer sizes.
 const RISE = 0.5;

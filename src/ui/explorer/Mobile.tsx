@@ -2,13 +2,15 @@
 // floating just above it. The 3D canvas stays interactive above the sheet; only the sheet and the chips take touches.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
-  animate, motion, useMotionValue, useMotionValueEvent, useTransform, type AnimationPlaybackControls, type MotionValue,
+  AnimatePresence, animate, motion, useMotionValue, useMotionValueEvent, useTransform, type AnimationPlaybackControls, type MotionValue,
 } from 'framer-motion';
 import { useStore, type PanelTab, type SheetState } from '../../store';
 import { SHEET_FRACTION, SHEET_PEEK_PX } from '../../data/cameras';
 import { BackChip } from './BackChip';
 import { InfoCardBody } from './InfoCard';
 import { Legends } from './Legends';
+import { ProposalChip } from './ProposalChip';
+import { RoomBar } from './RoomBar';
 import { TabBar, TabPanel } from './Tabs';
 
 type Snaps = Record<SheetState, number>;
@@ -52,11 +54,12 @@ function Sheet({ height, snaps }: { height: MotionValue<number>; snaps: Snaps })
   // The store drives the sheet (room picked, Back, tab tapped...); also re-fits when the viewport changes.
   useEffect(() => settle(sheet), [sheet, settle]);
 
-  // A room picked in the 3D view lifts the peeking sheet to half; clearing the selection tucks it away again.
+  // A room picked in the 3D view lifts the peeking sheet to half (not at eye level: the room bar stays above the peeking sheet);
+  // clearing the selection tucks it away again.
   useEffect(() => {
     const s = useStore.getState();
     if (!selectedRoom) s.setSheet('peek');
-    else if (s.sheet === 'peek') s.setSheet('half');
+    else if (s.sheet === 'peek' && s.roomView !== 'eye') s.setSheet('half');
     scrollRef.current?.scrollTo({ top: 0 });
   }, [selectedRoom]);
 
@@ -123,6 +126,7 @@ function Sheet({ height, snaps }: { height: MotionValue<number>; snaps: Snaps })
   return (
     <motion.section
       aria-label="Explore the kitchen"
+      data-label-obstacle
       style={{ height }}
       className="glass explorer-glass explorer-sheet pointer-events-auto absolute inset-x-0 bottom-0 flex flex-col overflow-hidden"
     >
@@ -139,19 +143,19 @@ function Sheet({ height, snaps }: { height: MotionValue<number>; snaps: Snaps })
           aria-label={sheet === 'peek' ? 'Expand panel' : 'Collapse panel'}
           aria-expanded={sheet !== 'peek'}
           onClick={() => setSheet(sheet === 'peek' ? 'half' : 'peek')}
-          className="flex h-6 w-full items-start justify-center pt-2"
+          className="sheet-handle flex h-8 w-full items-start justify-center pt-2.5"
         >
           <span className="h-1 w-10 rounded-full bg-cream/30" />
         </button>
-        <TabBar onSelect={onTab} />
+        <TabBar onSelect={onTab} className="h-11" />
       </div>
       <div
         ref={scrollRef}
         className={`thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-1 ${open ? '' : 'invisible'}`}
       >
         {selectedRoom && (
-          <div className="mb-4 border-b border-cream/12 pb-4">
-            <InfoCardBody roomId={selectedRoom} compact />
+          <div data-focus-return className="mb-4 border-b border-cream/12 pb-4">
+            <InfoCardBody roomId={selectedRoom} />
           </div>
         )}
         <div ref={panelRef}>
@@ -168,6 +172,8 @@ export function MobileExplorer() {
   const [stageH, setStageH] = useState(0);
   const [safeBottom, setSafeBottom] = useState(0);
   const sheet = useStore((s) => s.sheet);
+  const selectedRoom = useStore((s) => s.selectedRoom);
+  const eye = useStore((s) => s.roomView === 'eye');
   const height = useMotionValue(0);
   const dockBottom = useTransform(height, (h) => h + 12);
 
@@ -205,9 +211,15 @@ export function MobileExplorer() {
               sheet === 'full' ? 'invisible opacity-0' : ''
             }`}
           >
-            <BackChip />
-            {/* The safety legend would cover the model once the sheet is open. */}
-            <Legends compact showSafety={sheet === 'peek'} />
+            {/* Eye level: the room bar (it has its own Back) takes the place of the chip row. */}
+            <AnimatePresence>{selectedRoom && eye && <RoomBar key="bar" roomId={selectedRoom} />}</AnimatePresence>
+            {!(selectedRoom && eye) && (
+              <div className="flex w-full items-center justify-between gap-2">
+                <BackChip />
+                <ProposalChip className="ml-auto" />
+              </div>
+            )}
+            <Legends />
           </motion.div>
           <Sheet height={height} snaps={snaps} />
         </>
