@@ -18,7 +18,7 @@ import CameraControlsImpl from 'camera-controls';
 import * as THREE from 'three';
 import { useStore, type CameraMode, type CameraRequest } from '../store';
 import {
-  DEFAULT_FIT_ASPECT, DESKTOP_MIN_WIDTH, FIT_ASPECT, FOV, FRAME_LIFT, HERO_POSE, PANEL_WIDTH, fitOrbitPose, lookFov,
+  DEFAULT_FIT_ASPECT, DESKTOP_MIN_WIDTH, FIT_ASPECT, FOV, FRAME_LIFT, HERO_POSE, PANEL_WIDTH, SHEET_LIFT, fitOrbitPose, lookFov,
 } from '../data/cameras';
 import { createPathSampler, type PathSampler } from './cameraPath';
 
@@ -36,9 +36,6 @@ const ORBIT_MIN_DISTANCE = 12;
 const ORBIT_MAX_DISTANCE = 220;
 /** The orbit target may truck anywhere over the plinth and a little beyond. */
 const TARGET_BOUNDS = new THREE.Box3(new THREE.Vector3(-30, 0, -30), new THREE.Vector3(90, 30, 90));
-/** Mobile bottom sheet: how far (fraction of viewport height) the image rides up per sheet state. */
-const SHEET_LIFT = { peek: 0.07, half: 0.2, full: 0.2 } as const;
-
 /** Non-React access to the live controls. The store stays the public API. */
 export const rig: { controls: CameraControlsImpl | null } = { controls: null };
 

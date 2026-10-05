@@ -1,0 +1,173 @@
+/* Room label pills (src/scene/layers/Labels.tsx).
+   One absolutely positioned layer over the canvas. Labels.tsx moves each .lbl with a transform and fades it
+   with opacity / visibility; everything else (hover, selected, compact) is plain CSS driven by data attributes. */
+
+.lbl-layer {
+  --lbl-teal: var(--color-teal, #1d6866);
+  --lbl-orange: var(--color-orange, #cb622a);
+  --lbl-ink: var(--color-ink, #0c1718);
+  --lbl-font: 10.5px;
+  --lbl-pad-y: 5px;
+  --lbl-pad-x: 10px;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* Empty space must never swallow canvas drags; only the pills take the pointer. */
+  pointer-events: none;
+  contain: layout paint style;
+  font-family: var(--font-sans, "Public Sans", system-ui, sans-serif);
+}
+.lbl-layer[data-compact] {
+  --lbl-font: 9px;
+  --lbl-pad-y: 4px;
+  --lbl-pad-x: 8px;
+}
+
+.lbl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Ties a pill that had to move away from its room to the room's floor: the dot sits on the floor point, the line
+   runs to the pill (placed from Labels.tsx; all stems lie under all pills). */
+.lbl-stem {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1.5px;
+  margin-top: -0.75px;
+  transform-origin: 0 50%;
+  background: #fffaf0;
+  box-shadow: 0 0 0 0.75px rgba(29, 104, 102, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.15s ease;
+}
+.lbl-stem::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--lbl-teal);
+  box-shadow: 0 0 0 1.5px #fffaf0, 0 1px 3px rgba(7, 13, 14, 0.4);
+}
+
+.lbl-pill {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--lbl-pad-y) var(--lbl-pad-x);
+  border-radius: 12px;
+  background: rgba(255, 250, 240, 0.96);
+  box-shadow:
+    inset 0 0 0 1px rgba(29, 104, 102, 0.2),
+    0 1px 2px rgba(7, 13, 14, 0.4),
+    0 6px 16px rgba(7, 13, 14, 0.26);
+  color: var(--lbl-teal);
+  font-size: var(--lbl-font);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.22s ease,
+    background-color 0.22s ease;
+}
+
+/* Letter-spacing leaves a trailing gap after each line: balance it so the text centres. */
+.lbl-name > span {
+  display: block;
+  padding-left: 0.16em;
+}
+
+.lbl-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+/* Area tag: grows out of the pill's lower edge on hover / selection. */
+.lbl-area {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  padding: 3px 9px 3px calc(9px + 0.14em);
+  border-radius: 999px;
+  background: var(--lbl-teal);
+  color: #fffaf0;
+  font-size: calc(var(--lbl-font) - 1px);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  box-shadow: 0 4px 10px rgba(7, 13, 14, 0.35);
+  opacity: 0;
+  transform: translate(-50%, -5px);
+  clip-path: inset(0 50% 0 50% round 999px);
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    clip-path 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.lbl[data-hover] .lbl-pill,
+.lbl[data-selected] .lbl-pill {
+  transform: scale(1.06);
+}
+.lbl[data-hover] .lbl-pill {
+  background: #fff;
+  box-shadow:
+    inset 0 0 0 1px var(--lbl-teal),
+    0 2px 4px rgba(7, 13, 14, 0.4),
+    0 10px 22px rgba(7, 13, 14, 0.32);
+}
+.lbl[data-hover] .lbl-area,
+.lbl[data-selected] .lbl-area {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  clip-path: inset(0 0 0 0 round 999px);
+}
+
+/* Selected: the orange accent. */
+.lbl[data-selected] .lbl-pill {
+  background: var(--lbl-orange);
+  color: #fff;
+  box-shadow:
+    0 0 0 2px #fffaf0,
+    0 2px 4px rgba(7, 13, 14, 0.4),
+    0 10px 24px rgba(203, 98, 42, 0.45);
+}
+.lbl[data-selected] .lbl-dot {
+  background: #fffaf0;
+  box-shadow: none;
+}
+.lbl[data-selected] .lbl-area {
+  background: #fffaf0;
+  color: var(--lbl-orange);
+}
+
+.lbl-pill:focus-visible {
+  outline: 2px solid var(--lbl-orange);
+  outline-offset: 3px;
+}

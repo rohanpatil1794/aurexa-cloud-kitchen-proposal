@@ -100,6 +100,18 @@ export const MAX_FIT_DOLLY = 3.4;
  */
 export const FRAME_LIFT = { hero: 0.07, aerial: 0.05 } as const;
 
+/**
+ * Mobile bottom sheet (ui/explorer/Sheet.tsx). Peek is a fixed header (drag handle + tab bar) plus the bottom safe-area
+ * inset; half and full are fractions of the stage height.
+ */
+export const SHEET_PEEK_PX = 76;
+export const SHEET_FRACTION = { half: 0.52, full: 0.88 } as const;
+/**
+ * Fraction of the viewport height the model rides up per sheet state (CameraRig, mobile only): about half the height the
+ * sheet covers, so the model sits in the middle of the strip it leaves free. Full hides the model and shares half's lift.
+ */
+export const SHEET_LIFT = { peek: 0.055, half: 0.25, full: 0.25 } as const;
+
 /** Eye-level lens: keep roughly a 75 degree horizontal view, within sane vertical limits. */
 export function lookFov(aspect: number): number {
   const v = 2 * Math.atan(Math.tan((75 * deg) / 2) / Math.max(0.3, aspect)) / deg;
