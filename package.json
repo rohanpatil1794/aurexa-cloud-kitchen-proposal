@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate-layout.ts",
     "assets": "node scripts/brand-assets.mjs && tsx scripts/make-floorplan.mjs",
-    "shot": "node scripts/shot.mjs"
+    "shot": "node scripts/shot.mjs",
+    "validate:equipment": "tsx scripts/validate-equipment.ts",
+    "validate:all": "npm run validate && npm run validate:equipment"
   },
   "dependencies": {
     "@fontsource/public-sans": "^5.3.0",
