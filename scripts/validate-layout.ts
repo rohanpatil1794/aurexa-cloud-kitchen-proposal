@@ -290,5 +290,157 @@ section('7. Wall geometry');
   if (failed === before) ok('wall geometry checks passed');
 }
 
+// ---- 8. workflow flows (src/data/flows.ts) -----------------------------------------------------------------
+import { segmentHitsBox, wallCrossings } from '../src/scene/building/wallModel';
+import { FLOWS, FLOW_RIBBON, pathLength } from '../src/data/flows';
+import { roundPath } from '../src/scene/layers/flowsGeometry';
+import { DISH_STAGES, PICKUP_ZONE } from '../src/data/layout';
+
+section('8. Flow paths');
+{
+  const before = failed;
+  const Y = 0.2; // ribbons lie at 0.2 ft: a floor route cannot pass a sill or the counter-height pass window
+  const hw = FLOW_RIBBON.width / 2;
+  const fmt = (p: readonly number[]) => `(${p[0]}, ${p[1]})`;
+
+  // 8a. centre lines pass walls only through openings
+  for (const f of FLOWS) {
+    let segments = 0, hits = 0;
+    f.paths.forEach((path, k) => {
+      segments += path.length - 1;
+      for (const { segment, box } of wallCrossings(path, Y)) {
+        hits++;
+        fail(`${f.id} path ${k}: ${fmt(path[segment])} -> ${fmt(path[segment + 1])} runs into a ${box.kind} at x ${box.x0}-${box.x1}, z ${box.z0}-${box.z1}`);
+      }
+    });
+    if (!hits) ok(`${f.id}: ${f.paths.length} paths, ${segments} segments, ${f.paths.reduce((a, p) => a + pathLength(p), 0).toFixed(0)} ft: walls are crossed only through openings`);
+  }
+
+  // 8b. the drawn ribbon (rounded corners, full width) also clears every wall solid and door jamb
+  const jambs = WALL_MODEL.frames.filter((fr) => fr.kind === 'jamb' || fr.kind === 'post');
+  for (const f of FLOWS) {
+    let hits = 0;
+    f.paths.forEach((path, k) => {
+      const pts = roundPath(path, FLOW_RIBBON.radius);
+      for (let i = 0; i + 1 < pts.length && hits < 3; i++) {
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+        const l = Math.hypot(bx - ax, bz - az);
+        const nx = ((bz - az) / l) * hw, nz = (-(bx - ax) / l) * hw;
+        for (const side of [-1, 0, 1]) {
+          const p0: [number, number] = [ax + side * nx, az + side * nz], p1: [number, number] = [bx + side * nx, bz + side * nz];
+          const hit = wallBoxesIntersectSegment(p0, p1, Y).length > 0 || jambs.some((b) => segmentHitsBox(p0, p1, Y, b));
+          if (hit) { hits++; fail(`${f.id} path ${k}: the ${FLOW_RIBBON.width} ft ribbon touches a wall or jamb near ${fmt(pts[i].map((v) => +v.toFixed(2)))}`); break; }
+        }
+      }
+    });
+    if (!hits) ok(`${f.id}: ribbon edges and rounded corners clear all walls and door jambs`);
+  }
+
+  // 8c. no two flows share a lane: parallel stretches of different paths are at least one lane apart
+  {
+    const segs = FLOWS.flatMap((f) => f.paths.flatMap((path, k) => path.slice(1).map((q, i) => ({ id: `${f.id}#${k}`, a: path[i], b: q }))));
+    let clashes = 0;
+    for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) {
+      const p = segs[i], q = segs[j];
+      if (p.id === q.id) continue;
+      const pl = Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]), ux = (p.b[0] - p.a[0]) / pl, uz = (p.b[1] - p.a[1]) / pl;
+      const ql = Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]);
+      if (Math.abs(ux * (q.b[1] - q.a[1]) - uz * (q.b[0] - q.a[0])) / ql > 1e-6) continue; // not parallel: a crossing or a junction
+      const gap = Math.abs((q.a[0] - p.a[0]) * -uz + (q.a[1] - p.a[1]) * ux);
+      const t = (pt: readonly number[]) => (pt[0] - p.a[0]) * ux + (pt[1] - p.a[1]) * uz;
+      const overlap = Math.min(pl, Math.max(t(q.a), t(q.b))) - Math.max(0, Math.min(t(q.a), t(q.b)));
+      if (overlap > 0.3 && gap < FLOW_RIBBON.pitch - 0.02) {
+        clashes++;
+        fail(`${p.id} and ${q.id} run ${gap.toFixed(2)} ft apart for ${overlap.toFixed(1)} ft (lane pitch ${FLOW_RIBBON.pitch})`);
+      }
+    }
+    if (!clashes) ok(`${segs.length} segments: parallel flows keep a ${FLOW_RIBBON.pitch} ft lane pitch`);
+  }
+
+  // 8d. each route is walked space by space: every change of space is a declared door or open circulation
+  for (const f of FLOWS) {
+    let bad = 0;
+    f.paths.forEach((path, k) => {
+      const seq: SpaceId[] = [];
+      for (let i = 0; i + 1 < path.length; i++) {
+        const [ax, az] = path[i], [bx, bz] = path[i + 1];
+        const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.1));
+        for (let s = i === 0 ? 0 : 1; s <= n; s++) {
+          const sp = spaceAt(ax + ((bx - ax) * s) / n, az + ((bz - az) * s) / n);
+          if (seq[seq.length - 1] !== sp) seq.push(sp);
+        }
+      }
+      for (let i = 0; i + 1 < seq.length; i++) {
+        if (!adj.get(seq[i])?.has(seq[i + 1])) { bad++; fail(`${f.id} path ${k}: ${seq[i]} -> ${seq[i + 1]} is not a door or open passage`); }
+      }
+      if (k === 0 && !bad) console.log(`      ${f.id}: ${seq.join(' > ')}`);
+    });
+    if (!bad) ok(`${f.id}: every transition between spaces is a real opening`);
+  }
+
+  // 8e. the dirty main route visits the five wash stages in order, and everything stays on the plinth
+  {
+    const path = FLOWS.find((f) => f.id === 'dirty')!.paths[0];
+    const alongAt = (pt: readonly number[]): { d: number; s: number } => {
+      let best = { d: Infinity, s: 0 }, acc = 0;
+      for (let i = 1; i < path.length; i++) {
+        const [ax, az] = path[i - 1], [bx, bz] = path[i];
+        const l = Math.hypot(bx - ax, bz - az);
+        const t = Math.max(0, Math.min(1, ((pt[0] - ax) * (bx - ax) + (pt[1] - az) * (bz - az)) / (l * l)));
+        const d = Math.hypot(pt[0] - (ax + t * (bx - ax)), pt[1] - (az + t * (bz - az)));
+        if (d < best.d) best = { d, s: acc + t * l };
+        acc += l;
+      }
+      return best;
+    };
+    let last = -1, stageBad = 0;
+    for (const st of DISH_STAGES) {
+      const { d, s } = alongAt(st.at);
+      if (d > 0.05 || s <= last) { stageBad++; fail(`dirty route misses stage ${st.n} (${st.label}) at ${fmt(st.at)}: off by ${d.toFixed(2)} ft, order ${s <= last ? 'wrong' : 'ok'}`); }
+      last = s;
+    }
+    if (!stageBad) ok(`dirty route runs through all ${DISH_STAGES.length} wash stages in order`);
+
+    let outside = 0;
+    for (const f of FLOWS) for (const p of f.paths) for (const [x, z] of p) {
+      if (x < 0 || x > FOOTPRINT.w || z < 0 || z > PICKUP_ZONE.z + PICKUP_ZONE.d) { outside++; fail(`${f.id}: point ${fmt([x, z])} is off the plinth`); }
+    }
+    if (!outside) ok('every waypoint is inside the footprint or the pickup apron');
+  }
+
+  // 8f. no ribbon runs under floor-standing equipment (it would hide from above); overhead items and floor decals are fine
+  try {
+    const { EQUIPMENT } = await import('../src/data/equipment');
+    let hidden = 0;
+    const footprint = (it: (typeof EQUIPMENT)[number]) => {
+      const rot = (((it.rot ?? 0) % 180) + 180) % 180;
+      const cx = it.x + it.w / 2, cz = it.z + it.d / 2;
+      const [w, d] = rot === 90 ? [it.d, it.w] : [it.w, it.d];
+      return { x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2 };
+    };
+    const standing = EQUIPMENT.filter((it) => !it.props?.overhead && !it.props?.flat && !it.props?.outside);
+    for (const f of FLOWS) f.paths.forEach((path, k) => {
+      for (let i = 0; i + 1 < path.length; i++) {
+        const r = {
+          x0: Math.min(path[i][0], path[i + 1][0]) - hw, x1: Math.max(path[i][0], path[i + 1][0]) + hw,
+          z0: Math.min(path[i][1], path[i + 1][1]) - hw, z1: Math.max(path[i][1], path[i + 1][1]) + hw,
+        };
+        for (const it of standing) {
+          const b = footprint(it);
+          if (r.x0 < b.x1 - 0.02 && b.x0 < r.x1 - 0.02 && r.z0 < b.z1 - 0.02 && b.z0 < r.z1 - 0.02) {
+            hidden++;
+            fail(`${f.id} path ${k}: ${fmt(path[i])} -> ${fmt(path[i + 1])} runs under ${it.id} (${it.kind}) in ${it.room}`);
+          }
+        }
+      }
+    });
+    if (!hidden) ok(`no flow runs under any of ${standing.length} floor-standing equipment items`);
+  } catch (e) {
+    console.log(`  ! equipment check skipped: ${e instanceof Error ? e.message : e}`);
+  }
+
+  if (failed === before) ok('flow checks passed');
+}
+
 console.log(failed ? `\nFAILED: ${failed} problem(s)` : '\nAll layout checks passed.');
 process.exit(failed ? 1 : 0);

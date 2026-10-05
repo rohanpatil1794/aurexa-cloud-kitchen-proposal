@@ -144,6 +144,8 @@ export interface SafetyPoint {
   z: number;
   /** Height above floor, ft. */
   y: number;
+  /** Direction the marker faces, degrees (same convention as EquipItem.rot: 0 = south, 90 = east, 180 = north, 270 = west). */
+  rot?: number;
   room?: SpaceId;
   label?: string;
 }
