@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate-layout.ts",
-    "assets": "node scripts/brand-assets.mjs && node scripts/make-floorplan.mjs",
+    "assets": "node scripts/brand-assets.mjs && tsx scripts/make-floorplan.mjs",
     "shot": "node scripts/shot.mjs"
   },
   "dependencies": {

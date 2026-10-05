@@ -232,3 +232,23 @@ export function neighbourRoom(id: RoomId, dir: 1 | -1): RoomId {
 export function roomAt(x: number, z: number): Room | undefined {
   return ROOMS.find((r) => x >= r.x && x < r.x + r.w && z >= r.z && z < r.z + r.d);
 }
+
+// ---------------------------------------------------------------------------
+// Shared contracts between agents
+// ---------------------------------------------------------------------------
+/**
+ * Dishwashing line: five numbered stages in a U (west lane southbound from the kitchen-side door,
+ * east lane northbound to the exit door). The Dishwashing dressing places its numbered markers and
+ * equipment here; the Dirty / Utensils / Waste flow runs through these points in order.
+ * Dish room is x 43–50.5, z 16.5–36; doors: W@z26 (x 43) and E@z22 (x 50.5).
+ */
+export const DISH_STAGES: { n: number; label: string; at: [number, number] }[] = [
+  { n: 1, label: 'Dirty collection', at: [45, 27.5] },
+  { n: 2, label: 'Wash', at: [45, 31.5] },
+  { n: 3, label: 'Sanitize', at: [47.5, 34] },
+  { n: 4, label: 'Dry', at: [48.5, 29.5] },
+  { n: 5, label: 'Storage', at: [48.5, 24.5] },
+];
+
+/** Kitchen gas ring main (ft, plan coordinates; pipe height 9 ft): west x 14, south z 38.5, east x 42, north z 16. */
+export const GAS_RING = { west: 14, south: 38.5, east: 42, north: 16, y: 9 } as const;
