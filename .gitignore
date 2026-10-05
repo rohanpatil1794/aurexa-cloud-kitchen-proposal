@@ -6,3 +6,6 @@ dist
 .env*
 screenshots/
 .claude/
+
+# Client reference plan (original AI-drawn plan): kept locally, never published or used by the site
+public/assets/floorplan-or*.png
