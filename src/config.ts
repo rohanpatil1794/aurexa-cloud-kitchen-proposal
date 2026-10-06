@@ -1,6 +1,6 @@
 // Placeholders used across the site. Swap these when the client details are confirmed.
 export const CLIENT_NAME = 'Cloud Kitchen';
-export const KITCHEN_NAME = '[Kitchen Name]';
+export const KITCHEN_NAME = 'Kitchen';
 
 export const STUDIO_NAME = 'Aurexa Design Consultants';
 export const SITE_TITLE = `Aurexa × ${KITCHEN_NAME} — Cloud Kitchen Proposal`;

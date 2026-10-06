@@ -433,7 +433,7 @@ replaced before the link goes to the client.
 | Export | Placeholder | Appears in |
 | --- | --- | --- |
 | `CLIENT_NAME` | `Cloud Kitchen` | Hero subline, footer ("Prepared for"), page description and link preview |
-| `KITCHEN_NAME` | `[Kitchen Name]` | Tab title, link preview, Vision copy, the Next steps mail subject, the backdrop sign in the Content Creator Corner, `og.png` |
+| `KITCHEN_NAME` | `Kitchen` | Tab title, link preview, Vision copy, the Next steps mail subject, the backdrop sign in the Content Creator Corner, `og.png` |
 | `CONTACT.person`, `.email`, `.phone`, `.address`, `.hours` | `[Contact Name], [Role]`, `hello@aurexa.example`, `+00 00000 00000`, `[Studio address line 1], [City]`, `[Opening hours]` | Next steps band (mailto and tel links are built from email and phone) |
 
 `SITE_TITLE` and `SITE_DESCRIPTION` are built from those names and are injected into `index.html` (title, description,

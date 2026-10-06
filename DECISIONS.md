@@ -29,7 +29,7 @@ Deviations from the LAYOUT SPEC. Rooms and circulation tile the footprint exactl
 - The client's original AI-drawn plan is reference only: it lives in `reference/floorplan-original.png` (git-ignored; renamed from the misspelled `floorplan-orignal.png`), nothing in the site references it, and it is not in `public/` or `dist`. The old build plugin that stripped it from the output is gone. The source logos and palette moved out of `public/` too, to `brand-src/` (tracked; read only by `scripts/brand-assets.mjs`), so nothing reference-only is served.
 - Brand cuts come from an exact two-background matte of logo-light / logo-dark (identical marks on white and black), so no halo on any backdrop. Wordmarks are single-ink (black on light, white on dark); recolour them in CSS with mask-image if a teal or cream version is needed.
 - apple-touch-icon.png is a full-bleed cream square (iOS rounds it itself; pre-rounded transparent corners would show black on iOS). favicon.png / favicon-32.png / favicon.ico are transparent.
-- The OG image splits the title over two lines (AUREXA x [KITCHEN NAME] / CLOUD KITCHEN PROPOSAL) with an orange rule in place of the em dash so it stays legible at thumbnail size; the og:title meta carries the full string. `public/og.png` carries KITCHEN_NAME as a picture: run `npm run assets` after changing it.
+- The OG image splits the title over two lines (AUREXA x KITCHEN / CLOUD KITCHEN PROPOSAL) with an orange rule in place of the em dash so it stays legible at thumbnail size; the og:title meta carries the full string. `public/og.png` carries KITCHEN_NAME as a picture: run `npm run assets` after changing it.
 
 ## Rendering and performance
 
