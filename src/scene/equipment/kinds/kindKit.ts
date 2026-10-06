@@ -18,6 +18,8 @@ export const str = (it: EquipItem, key: string, fallback: string): string => {
 /** Near-black ink for trims, plates and sign backs; and a true black for lenses and cables. */
 export const INK = '#2b3236';
 export const BLACK = '#14181b';
+/** Mid slate for plinths and device bodies: CHARCOAL turns black in shade, this stays a readable dark grey. */
+export const SLATE = '#4d5a61';
 
 const _a = new THREE.Color();
 const _b = new THREE.Color();

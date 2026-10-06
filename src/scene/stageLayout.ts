@@ -1,14 +1,15 @@
 // Where the 3D view is free of UI: shared by the camera rig (frames poses in it) and the labels (keep clear of the rest).
 // DOM reads only (top bar, hero text), no scene or store state of its own. Rectangles are in canvas px (origin = the
 // canvas's top-left corner), which is what the camera and the label layer work in.
-import { DESKTOP_MIN_WIDTH, PANEL_WIDTH, SHEET_FRACTION, SHEET_PEEK_PX, type FreeRect } from '../data/cameras';
+import { PANEL_WIDTH, SHEET_FRACTION, SHEET_PEEK_PX, isSheetLayout, type FreeRect } from '../data/cameras';
 import type { SheetState } from '../store';
 
 /**
- * Phones get the bottom sheet, everything wider the side panel. This is the one rule the camera and the labels follow; the
- * explorer UI (ExplorerUI / lib/hooks useIsMobile) must use the same one, so changing it takes this line and that hook together.
+ * Phones and portrait tablets get the bottom sheet, landscape screens the side panel (the rule lives in data/cameras.ts
+ * isSheetLayout, takes the stage's width AND height). The camera and the labels follow it here; the explorer UI follows
+ * it through lib/hooks useSheetLayout, so a change to the rule needs no change anywhere else.
  */
-export const isSheetLayout = (width: number): boolean => width < DESKTOP_MIN_WIDTH;
+export { isSheetLayout };
 
 /** The side panel with its 12 px margin from the screen edge and a gap before the model. */
 const PANEL_RESERVE = PANEL_WIDTH + 24;
@@ -16,11 +17,18 @@ const PANEL_RESERVE = PANEL_WIDTH + 24;
 /** Landscape phones: the explorer panel folds into a drawer over the stage (ui/explorer/Desktop.tsx SHORT_SCREEN, max-height 500px). */
 export const isShortScreen = (height: number): boolean => height <= 500;
 
-/** How far (px) the fixed top bar reaches into the canvas. */
+/**
+ * How far (px) the fixed top bar reaches into the canvas. A canvas that is off screen altogether (the scene is built behind a
+ * page that was reloaded or linked scrolled down) counts as resting at the top of the viewport, where the sticky stage is
+ * when the reader gets to it: measured from its real position the bar would "reach" thousands of px into it and the camera
+ * would frame the model out of sight.
+ */
 export function topBarHeight(canvas: HTMLElement): number {
   const bar = document.querySelector('.topbar');
   const bottom = bar ? bar.getBoundingClientRect().bottom : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 0;
-  return Math.max(0, bottom - canvas.getBoundingClientRect().top);
+  const box = canvas.getBoundingClientRect();
+  const top = box.bottom <= 0 || box.top >= window.innerHeight ? 0 : box.top;
+  return Math.max(0, bottom - top);
 }
 
 /** Height the bottom sheet covers in each state. Full is framed like half: the model is hidden behind it anyway. */
@@ -28,7 +36,7 @@ export const sheetCover = (h: number, sheet: SheetState): number => (sheet === '
 
 /** The explorer's free area: below the top bar, left of the side panel (desktop; none on a short screen) or above the sheet (phones). */
 export function explorerFree(w: number, h: number, sheet: SheetState, topBar: number, out: FreeRect = { x0: 0, y0: 0, x1: 0, y1: 0 }): FreeRect {
-  const sheetLayout = isSheetLayout(w);
+  const sheetLayout = isSheetLayout(w, h);
   out.x0 = 0;
   out.y0 = topBar;
   out.x1 = sheetLayout || isShortScreen(h) ? w : w - PANEL_RESERVE;
@@ -42,7 +50,7 @@ export function explorerFree(w: number, h: number, sheet: SheetState, topBar: nu
  * screens the slim room bar instead.
  */
 export const CARD = { w: 396, h: 456 } as const;
-export const hasRoomCard = (w: number, h: number): boolean => !isSheetLayout(w) && !isShortScreen(h);
+export const hasRoomCard = (w: number, h: number): boolean => !isSheetLayout(w, h) && !isShortScreen(h);
 
 /** The hero's text block in canvas px. */
 export interface TextBox {

@@ -13,17 +13,28 @@ export function easeTo(v: number, goal: number, rate: number, dt: number, snap =
  */
 export const pillPointer = { over: false };
 
+/**
+ * The model on a stage is about min(free width, MODEL_ASPECT x free height) px wide (the 3/4 view is ~1.3x wider than tall,
+ * see stageLayout heroFree). Under COMPACT_MODEL px the stage is compact: a narrow one (phone portrait) and a short one
+ * (landscape phone, a squat window) both qualify. The labels and the north compass share this rule.
+ */
+const MODEL_ASPECT = 1.3;
+const COMPACT_MODEL = 720;
+export const isCompactStage = (freeWidth: number, freeHeight: number): boolean =>
+  Math.min(freeWidth, MODEL_ASPECT * freeHeight) < COMPACT_MODEL;
+
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /**
  * Offsets a box may take, as [fraction of its width, boxes of its height], nearest first. Index 0 is "stay put".
- * (Sorted by an assumed 80 x 30 px box: only the order matters.)
+ * (Sorted by an assumed 90 x 42 px box: only the order matters.)
  */
 const CANDIDATES: readonly (readonly [number, number])[] = (() => {
   const list: [number, number][] = [];
-  for (const fx of [0, -0.6, 0.6, -1.2, 1.2]) for (let rows = -5; rows <= 5; rows++) list.push([fx, rows]);
-  const cost = ([fx, rows]: [number, number]) => Math.hypot(fx * 80, rows * 34);
-  return list.sort((a, b) => cost(a) - cost(b));
+  for (const fx of [0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75, 1, -1, 1.25, -1.25, 1.5, -1.5])
+    for (const rows of [0, -0.5, 0.5, -1, 1, -1.5, 1.5, -2, 2, -2.5, 2.5, -3, 3, -4, 4, -5, 5]) list.push([fx, rows]);
+  const cost = ([fx, rows]: [number, number]) => Math.hypot(fx * 90, rows * 42);
+  return list.sort((a, b) => cost(a) - cost(b)); // stable: equal costs keep the order above (a fixed, history-free tie-break)
 })();
 /** Free space kept between neighbouring boxes, px. */
 const GAP = 4;
@@ -34,7 +45,11 @@ export const MAX_OBSTACLES = 16;
  * Places label boxes on screen so none overlap. Boxes are visited in priority order; each takes its
  * anchor position if that is free, otherwise the nearest free spot from a list of offsets
  * (stacked above / below, then shifted sideways, further out as needed). A box with no free spot is left unplaced.
- * Keep-out rectangles (the UI over the stage) count as boxes placed first.
+ * Keep-out rectangles (the UI over the stage) count as boxes placed first; keep-out points (each room's floor-centre click
+ * target) are avoided by every box but the room's own.
+ *
+ * The result is a pure function of the inputs: nothing from earlier frames is remembered (no "stay where you were"
+ * preference), so one camera pose always gives one layout, however the camera got there. Smoothing is the caller's job.
  *
  * All storage is allocated once, so `resolve()` can run every frame.
  */
@@ -55,14 +70,20 @@ export class Declutter {
   readonly obstacles = new Float32Array(MAX_OBSTACLES * 4);
   obstacleCount = 0;
 
+  /** Keep-out points, px: the click target of box j (its room's floor centre). No box but j may cover it; `keepOn[j]` = it exists this frame. */
+  readonly keepX: Float32Array;
+  readonly keepY: Float32Array;
+  readonly keepOn: Uint8Array;
+  /** Half-size (px) of the square kept clear around each point. */
+  keepHalf = 10;
+
   /** Boxes are kept inside this rectangle, px (the part of the screen no UI covers). */
   minX = 0;
   minY = 0;
   maxX = Infinity;
   maxY = Infinity;
 
-  /** Candidate each box used last frame: tried again before the others so layouts do not flicker while orbiting. */
-  private readonly last: Uint8Array;
+  private readonly n: number;
   // Boxes placed so far this pass: centre and half size (padded by half the gap).
   private readonly px: Float32Array;
   private readonly py: Float32Array;
@@ -79,7 +100,10 @@ export class Declutter {
     this.dx = new Float32Array(n);
     this.dy = new Float32Array(n);
     this.placed = new Uint8Array(n);
-    this.last = new Uint8Array(n);
+    this.keepX = new Float32Array(n);
+    this.keepY = new Float32Array(n);
+    this.keepOn = new Uint8Array(n);
+    this.n = n;
     this.px = new Float32Array(n + MAX_OBSTACLES);
     this.py = new Float32Array(n + MAX_OBSTACLES);
     this.phw = new Float32Array(n + MAX_OBSTACLES);
@@ -103,10 +127,7 @@ export class Declutter {
       this.dy[i] = 0;
       this.placed[i] = 0;
       if (!this.active[i]) continue;
-      const prev = this.last[i];
-      let ok = this.tryPlace(i, 0) || (prev > 0 && this.tryPlace(i, prev));
-      for (let c = 1; !ok && c < CANDIDATES.length; c++) if (c !== prev) ok = this.tryPlace(i, c);
-      if (!ok) this.last[i] = 0;
+      for (let c = 0; c < CANDIDATES.length; c++) if (this.tryPlace(i, c)) break;
     }
   }
 
@@ -118,6 +139,9 @@ export class Declutter {
     for (let j = 0; j < this.count; j++) {
       if (Math.abs(cx - this.px[j]) < hw + this.phw[j] && Math.abs(cy - this.py[j]) < hh + this.phh[j]) return false;
     }
+    for (let j = 0; j < this.n; j++) {
+      if (j !== i && this.keepOn[j] && Math.abs(cx - this.keepX[j]) < hw + this.keepHalf && Math.abs(cy - this.keepY[j]) < hh + this.keepHalf) return false;
+    }
     const m = this.count++;
     this.px[m] = cx;
     this.py[m] = cy;
@@ -126,7 +150,6 @@ export class Declutter {
     this.dx[i] = cx - this.x[i];
     this.dy[i] = cy - this.y[i];
     this.placed[i] = 1;
-    this.last[i] = c;
     return true;
   }
 }

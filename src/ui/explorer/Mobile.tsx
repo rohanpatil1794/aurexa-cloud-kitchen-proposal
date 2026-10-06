@@ -1,5 +1,6 @@
-// Mobile explorer: a draggable bottom sheet (peek / half / full) with the same tabs, and the back chip + legends
-// floating just above it. The 3D canvas stays interactive above the sheet; only the sheet and the chips take touches.
+// Sheet explorer (phones and portrait tablets, see data/cameras.ts isSheetLayout): a draggable bottom sheet (peek / half /
+// full) with the same tabs, and the back chip + legends floating just above it, the zoom buttons at the top-left.
+// The 3D canvas stays interactive above the sheet; only the sheet and the chips take touches.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AnimatePresence, animate, motion, useMotionValue, useMotionValueEvent, useTransform, type AnimationPlaybackControls, type MotionValue,
@@ -12,6 +13,7 @@ import { Legends } from './Legends';
 import { ProposalChip } from './ProposalChip';
 import { RoomBar } from './RoomBar';
 import { TabBar, TabPanel } from './Tabs';
+import { ZoomControls } from './ZoomControls';
 
 type Snaps = Record<SheetState, number>;
 const STATES: SheetState[] = ['peek', 'half', 'full'];
@@ -205,6 +207,11 @@ export function MobileExplorer() {
       <div ref={insetRef} aria-hidden className="absolute bottom-0 left-0 w-0" style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
       {stageH > 0 && (
         <>
+          {/* Top-left, clear of the sheet until it is full height (then it would reach under it, so it steps aside like the dock). */}
+          <ZoomControls
+            rowWhenShort
+            className={`absolute left-3 top-[calc(var(--topbar-h)+0.75rem)] transition-opacity duration-200 ${sheet === 'full' ? 'invisible opacity-0' : ''}`}
+          />
           <motion.div
             style={{ bottom: dockBottom }}
             className={`absolute inset-x-3 flex max-h-[60%] flex-col-reverse items-start gap-2 transition-opacity duration-200 ${

@@ -236,8 +236,9 @@ export function RoomPicking() {
           else hover(roomIdAt(e));
         }}
         onPointerDown={(e) => {
-          // Touch: light the room under the finger while it is down.
-          if (e.nativeEvent.pointerType === 'touch' && pickable()) useStore.getState().setHoveredRoom(roomIdAt(e));
+          // Touch: light the room under the finger while it is down. (Not for the press a label pill forwards to the camera
+          // controls, which is synthetic: that finger is on a pill, and lighting the floor under it would swap dot and pill.)
+          if (e.nativeEvent.isTrusted && e.nativeEvent.pointerType === 'touch' && pickable()) useStore.getState().setHoveredRoom(roomIdAt(e));
         }}
         onPointerUp={(e) => {
           if (e.nativeEvent.pointerType === 'touch') hover(null);

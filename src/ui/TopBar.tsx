@@ -38,12 +38,15 @@ function hasDarkBackground(el: Element): boolean {
 
 /**
  * Reads the page under the bar (`barH` tall): which tone (dark stage or dark section vs light section)
- * and which section is in view. The stage counts as "under the bar" until its bottom edge clears the bar.
+ * and which section is in view. Everything is classified by what lies under the bar's centre line, so the bar is dark or
+ * cream as a whole, never the cream frosting over a dark strip of the stage (a nav jump parks the next section flush under
+ * the bar, which leaves exactly the last bar-height of the sticky stage behind it: the stage's bottom edge is then at
+ * barH, not above it, and the bar must stay dark).
  */
 function measure(barH: number): { tone: Tone; active: LinkId; scrolled: boolean } {
   const mid = barH / 2;
   const stage = stageEl();
-  const overStage = !!stage && stage.getBoundingClientRect().bottom > barH + 4;
+  const overStage = !!stage && stage.getBoundingClientRect().bottom > mid;
 
   const line = Math.max(120, window.innerHeight * 0.3);
   const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;

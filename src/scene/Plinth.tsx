@@ -63,9 +63,13 @@ function speckleTexture(): THREE.CanvasTexture {
   c.width = c.height = S;
   const ctx = c.getContext('2d')!;
   const img = ctx.createImageData(S, S);
-  for (let i = 0; i < S * S; i++) {
+  const d = img.data;
+  for (let i = 0, o = 0; i < S * S; i++, o += 4) {
     const n = 240 + Math.random() * 15 - (Math.random() < 0.04 ? 14 : 0);
-    img.data.set([n, n - 1, n - 3, 255], i * 4);
+    d[o] = n;
+    d[o + 1] = n - 1;
+    d[o + 2] = n - 3;
+    d[o + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(c);

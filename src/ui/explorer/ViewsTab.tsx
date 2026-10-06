@@ -43,20 +43,28 @@ function RoomSelect({ value, onChange }: { value: RoomId | null; onChange: (id: 
 }
 
 /**
- * How to move the camera, worded for the visitor's input device (the mappings live in scene/CameraRig.tsx, the wheel in
- * ui/ExplorerUI.tsx). With a mouse the wheel keeps scrolling the page; zooming takes Ctrl / Cmd (or a trackpad pinch).
+ * How to move the camera, worded for the visitor's input device and the view (the mappings live in scene/CameraRig.tsx; the + / -
+ * buttons are ui/explorer/ZoomControls.tsx). Orbit views: drag turns the model, right-drag or two fingers pan it, a pinch,
+ * Ctrl / Cmd + scroll or the buttons zoom, and the plain mouse wheel scrolls the page. Eye level: drag looks around, zooming
+ * changes the lens, there is no pan.
  */
 function ControlsHint() {
   const touch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-  const rows = touch
-    ? [['Drag', 'Orbit'], ['Pinch', 'Zoom'], ['Two fingers', 'Pan']]
-    : [['Drag', 'Orbit'], ['Right-drag', 'Pan'], ['Scroll', 'Down the page'], ['Ctrl / ⌘ + scroll', 'Zoom']];
+  const eye = useStore((s) => s.roomView === 'eye' && s.selectedRoom !== null);
+  // [how, what, takes the whole row]
+  const rows: [string, string, boolean?][] = eye
+    ? touch
+      ? [['Drag', 'Look around'], ['Pinch or + / −', 'Zoom the lens']]
+      : [['Drag', 'Look around'], ['Scroll', 'Down the page'], ['Pinch, Ctrl / ⌘ + scroll or + / −', 'Zoom the lens', true]]
+    : touch
+      ? [['Drag', 'Orbit'], ['Two-finger drag', 'Pan'], ['Pinch or + / −', 'Zoom', true]]
+      : [['Drag', 'Orbit'], ['Right-drag', 'Pan'], ['Scroll', 'Down the page'], ['Pinch, Ctrl / ⌘ + scroll or + / −', 'Zoom', true]];
   return (
     <div>
       <MicroHeading className="mb-2 px-0.5">Controls</MicroHeading>
-      <dl className={`grid gap-2 ${touch ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        {rows.map(([how, what]) => (
-          <div key={how} className="rounded-xl bg-black/20 px-3 py-2.5">
+      <dl className="grid grid-cols-2 gap-2">
+        {rows.map(([how, what, wide]) => (
+          <div key={how} className={`rounded-xl bg-black/20 px-3 py-2.5 ${wide ? 'col-span-2' : ''}`}>
             <dt className="text-[11.5px] leading-tight text-cream/70">{how}</dt>
             <dd className="mt-0.5 text-[13px] font-medium text-cream">{what}</dd>
           </div>

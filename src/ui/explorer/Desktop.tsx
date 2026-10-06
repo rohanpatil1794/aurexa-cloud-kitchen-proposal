@@ -1,5 +1,6 @@
-// Desktop explorer: a 360 px glass panel on the right (Rooms | Layers | Views), the room card and the legend key at the
-// bottom-left of the stage, and the back chip under the top bar. The empty wrapper lets pointer input through to the canvas.
+// Landscape explorer (desktops, landscape tablets; phones and portrait tablets get the sheet, see Mobile.tsx): a 360 px glass
+// panel on the right (Rooms | Layers | Views), the room card and the legend key at the bottom-left of the stage, and the back
+// chip with the zoom buttons under it at the top-left. The empty wrapper lets pointer input through to the canvas.
 // Eye level swaps the card for the slim RoomBar so the walk-through keeps the lens; on short landscape screens (phones turned
 // sideways) the panel also folds into a drawer behind a toggle and the room always gets the bar.
 import { useState } from 'react';
@@ -14,6 +15,7 @@ import { FloatingCard } from './InfoCard';
 import { Legends } from './Legends';
 import { RoomBar } from './RoomBar';
 import { TabBar, TabPanel } from './Tabs';
+import { ZoomControls } from './ZoomControls';
 
 const SHORT_SCREEN = '(max-height: 500px)';
 
@@ -35,7 +37,7 @@ function Panel({ short }: { short: boolean }) {
       <TabBar />
       <div className="mx-4 h-px shrink-0 bg-cream/12" />
       <TabPanel className="thin-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4" />
-      {/* The wheel zooms the model only with Ctrl / Cmd, so the way on to the proposal is always at hand. */}
+      {/* The plain wheel scrolls the page and zooming takes Ctrl / Cmd, a pinch or the + / - buttons, so the way on to the proposal is always at hand. */}
       <button
         type="button"
         onClick={scrollToProposal}
@@ -75,10 +77,12 @@ export function DesktopExplorer() {
   return (
     <div data-explorer className="pointer-events-none absolute inset-0 z-10">
       <BackChip className="absolute left-4 top-[calc(var(--topbar-h)+1rem)]" />
+      <ZoomControls className="absolute left-4 top-[calc(var(--topbar-h)+1rem+2.75rem+0.5rem)]" />
       {short && <DrawerToggle open={drawerOpen} onToggle={() => setDrawerOpen((v) => !v)} />}
-      {/* Bottom-up stack: the room card, then the legend key above it. Never reaches under the panel (360 + 12 + 16 + 16). */}
+      {/* Bottom-up stack: the room card, then the legend key above it. Never reaches under the panel (360 + 12 + 16 + 16),
+          nor up into the back chip and the zoom buttons (topbar + 16 + 44 + 8 + 88 + 12). */}
       <div
-        className={`absolute bottom-4 left-4 flex max-h-[calc(100%-9.5rem)] flex-col-reverse items-start gap-3 ${
+        className={`absolute bottom-4 left-4 flex max-h-[calc(100%-15.5rem)] flex-col-reverse items-start gap-3 ${
           panelShown ? 'max-w-[calc(100%-404px)]' : 'max-w-[calc(100%-2rem)]'
         }`}
       >

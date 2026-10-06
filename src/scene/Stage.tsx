@@ -15,7 +15,9 @@ import { useStore } from '../store';
 import { isMobileNow, useIsMobile } from '../lib/hooks';
 import { FOV, HERO_POSE } from '../data/cameras';
 import { WebGLFallback } from '../ui/WebGLFallback';
+import { loadTextFonts } from '../lib/textTexture';
 import { notifyContextRestored } from './lightState';
+import { prepareFloorTextures } from './floorTextures';
 import { BootGate, MAX_TIER, RenderGovernor, pixelRatio } from './RenderGovernor';
 import { Scene } from './Scene';
 
@@ -24,6 +26,11 @@ const CAMERA = { position: HERO_POSE.position, fov: FOV.orbit, near: 1, far: 900
 const GL = { antialias: true, alpha: true, powerPreference: 'high-performance' as const, stencil: false };
 const RESIZE = { scroll: false, debounce: { scroll: 0, resize: 0 } };
 const CONTEXT_LOST_GRACE_MS = 4000;
+
+// Two jobs start as soon as this chunk runs, long before the scene needs them: the sign and label fonts download (textTexture.ts)
+// and the floor textures are painted in a worker (floorTextures.ts).
+loadTextFonts();
+prepareFloorTextures();
 
 /** Catches renderer / context creation errors thrown while mounting the Canvas. */
 class StageBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {

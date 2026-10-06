@@ -10,10 +10,15 @@
 //  - Fade by distance: orbit views show every label (they fade away only for near-horizontal views, where they
 //    would pile up); at eye level only nearby labels remain. The selected room's label always stays.
 //  - Overlaps: narrow neighbours are stacked / shifted on screen (Declutter); a pill with no free spot fades out. The
-//    UI over the stage (anything marked data-label-obstacle: panel, sheet, room card, chips, legends) is a keep-out area.
-//  - Compact screens (phones, a narrow stage): one short word per room, small type, and rooms much smaller on screen than
-//    their pill shrink to a zone-coloured dot until they are hovered, tapped or selected, so the model stays readable.
-//  - Pills are buttons: hover lights the room (store.hoveredRoom), a click selects it.
+//    UI over the stage (anything marked data-label-obstacle: panel, sheet, room card, chips, legends) and the north compass
+//    are keep-out areas, and no pill covers ANOTHER room's floor-centre click target (a pill that has to move gets a stem).
+//  - The settled layout is a pure function of camera + viewport + selection (+ hover): Declutter and the dot / pill choice
+//    remember nothing, only the eased glide towards the result does. Timers run on performance.now(), never on the R3F clock:
+//    that one restarts from 0 whenever the Stage flips the frameloop (off screen, tab hidden), which used to hide the labels.
+//  - Compact screens (phones, a small stage in either direction): one short word per room, small type, and rooms much smaller
+//    on screen than their pill shrink to a zone-coloured dot until they are hovered, tapped or selected, so the model stays readable.
+//  - Pills are buttons: hover lights the room (store.hoveredRoom), a click selects it. A drag that starts on a pill or dot
+//    orbits the model like a drag on the canvas (touch-action: none, and the press is forwarded to the camera controls).
 import { useCallback, useEffect, useMemo, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useFrame, useThree, type RootState } from '@react-three/fiber';
@@ -24,8 +29,9 @@ import type { Room, RoomId } from '../../data/types';
 import { wallAnim } from '../../lib/wallAnim';
 import { useStore } from '../../store';
 import { explorerFree, topBarHeight } from '../stageLayout';
-import { Declutter, MAX_OBSTACLES, easeTo, pillPointer } from './labelsLayout';
+import { Declutter, MAX_OBSTACLES, easeTo, isCompactStage, pillPointer } from './labelsLayout';
 import { LABEL_LINES, LABEL_SHORT, areaLabel } from './labelsText';
+import { NORTH_ARROW_RECT } from './NorthArrow';
 import './labels.css';
 
 const N = ROOMS.length;
@@ -63,11 +69,15 @@ const ENTER_FADE = 0.5;
 const OPACITY_STEPS = 50;
 /** Below this opacity a pill is hidden outright (and stops taking the pointer). */
 const HIDE_BELOW = 0.06;
-/** A free stage area narrower than this (px) gets compact labels. */
-const COMPACT_WIDTH = 720;
-/** Compact only: a room whose size on screen is under MINI_IN x its pill's width shows a dot, until it exceeds MINI_OUT x. */
-const MINI_IN = 0.8;
-const MINI_OUT = 1;
+/** Compact only: a room whose size on screen is under MINI_AT x its pill's width shows a dot (one threshold: no memory of the last state). */
+const MINI_AT = 0.9;
+/** A frame this long (ms) after the last one is a resume (stage back on screen, tab shown): the layout inputs are measured again at once. */
+const RESUME_GAP_MS = 400;
+/** A press that moves further than this (px) is a drag, not a tap: as in RoomPicking for a mouse, a little more for a finger. */
+const TAP_SLOP = { mouse: 6, touch: 10 } as const;
+/** Clear space (px) kept around the north compass, and around each room's floor-centre click target (half-size of the square; the declutter's own gap comes on top). */
+const ARROW_PAD = 6;
+const CLICK_TARGET_HALF = 6;
 /** Side (px) of a dot, with its ring. */
 const MINI_SIZE = 15;
 /** Anchors this far outside the screen (px) are skipped; closer ones are pulled inside it. */
@@ -131,7 +141,9 @@ class LabelRig {
   private dim = 0;
   private focusX = 0;
   private focusZ = 0;
+  /** performance.now() (ms) of the first frame in the explorer; -1 before. */
   private enterAt = -1;
+  private lastAt = -1;
   private compact = false;
   private width = 0;
   private height = 0;
@@ -140,6 +152,8 @@ class LabelRig {
   private readonly free: FreeRect = { x0: 0, y0: 0, x1: 0, y1: 0 };
   private obstacleEls: HTMLElement[] = [];
   private frame = 0;
+  /** The canvas: presses that start on a pill are forwarded to it, so the camera controls see them. */
+  canvas: HTMLElement | null = null;
   private readonly resize: ResizeObserver | null;
 
   constructor() {
@@ -151,6 +165,7 @@ class LabelRig {
       this.declutter.w[i] = DEFAULT_SIZE[0];
       this.declutter.h[i] = DEFAULT_SIZE[1];
     });
+    this.declutter.keepHalf = CLICK_TARGET_HALF;
     // Watches the full pills: they keep their size while a dot is shown.
     this.resize = typeof ResizeObserver === 'undefined'
       ? null
@@ -189,16 +204,22 @@ class LabelRig {
     this.resize?.disconnect();
   }
 
-  update(state: RootState, rawDt: number): void {
+  update(state: RootState): void {
     const s = useStore.getState();
-    const dt = Math.min(rawDt, 0.1);
+    // Own wall clock: R3F's clock restarts from 0 whenever the frameloop flips (stage scrolled away, tab hidden, shaders
+    // compiling), and a frame after an idle stretch carries the whole gap as its delta.
+    const now = performance.now();
+    const gap = this.lastAt < 0 ? 0 : now - this.lastAt;
+    this.lastAt = now;
+    const dt = gap === 0 ? 1 / 60 : Math.min(gap / 1000, 0.1);
+    const resumed = gap > RESUME_GAP_MS;
     const reduced = s.reducedMotion;
     const cam = state.camera;
     const { width: W, height: H } = state.size;
 
     const explorer = s.phase === 'explorer';
     if (!explorer) this.enterAt = -1;
-    else if (this.enterAt < 0) this.enterAt = state.clock.elapsedTime;
+    else if (this.enterAt < 0) this.enterAt = now;
 
     // Under the ceiling the labels would show through it.
     const underCeiling = wallAnim.t > 0.02 && cam.position.y < wallAnim.h + CEILING;
@@ -207,14 +228,20 @@ class LabelRig {
     this.master = easeTo(this.master, goal, goal ? 6 : 8, dt, reduced);
     this.lookT = easeTo(this.lookT, s.camera.mode === 'look' ? 1 : 0, 3, dt, reduced);
 
-    if (W !== this.width || H !== this.height) {
+    // The top bar's reach into the canvas: measured again after a resize, a resume and every OBSTACLE_REFRESH frames, never
+    // a stale value from before the stage was off screen.
+    const measure = W !== this.width || H !== this.height || resumed || this.frame % OBSTACLE_REFRESH === 0;
+    if (measure && this.host) {
       this.width = W;
       this.height = H;
-      if (this.host) this.topBar = topBarHeight(this.host);
+      // Capped at the bar's own height: a stage scrolled partly off the top would otherwise read the bar as ever taller and
+      // change the layout (compact labels, pills pushed down) with the page scroll instead of with the camera.
+      const bar = document.querySelector('.topbar');
+      this.topBar = Math.min(topBarHeight(this.host), bar ? bar.getBoundingClientRect().height : Infinity);
     }
     // How much stage the explorer UI leaves decides whether the labels go compact.
     explorerFree(W, H, s.sheet, this.topBar, this.free);
-    const compact = this.free.x1 - this.free.x0 < COMPACT_WIDTH;
+    const compact = isCompactStage(this.free.x1 - this.free.x0, this.free.y1 - this.free.y0);
     if (compact !== this.compact && this.host) {
       this.compact = compact;
       if (compact) this.host.setAttribute('data-compact', '');
@@ -226,13 +253,14 @@ class LabelRig {
     dc.minY = this.topBar + MARGIN;
     dc.maxX = W - MARGIN;
     dc.maxY = H - MARGIN;
-    this.readObstacles();
-
     cam.updateMatrixWorld();
+    this.readObstacles(measure);
     cam.getWorldDirection(_fwd);
     const pxPerFtAtOne = H / (2 * Math.tan(((cam as THREE.PerspectiveCamera).fov * DEG) / 2));
     const y = wallAnim.h + (wallAnim.t > 0.02 ? CEILING : 0) + LIFT;
-    const sinceEnter = state.clock.elapsedTime - this.enterAt - ENTER_DELAY;
+    const sinceEnter = (now - this.enterAt) / 1000 - ENTER_DELAY;
+    // Room picking is off at eye level: only then does a pill over a floor-centre not matter.
+    const pickable = s.camera.mode !== 'look';
     const selIndex = s.selectedRoom ? INDEX_OF[s.selectedRoom] : -1;
     const hovIndex = s.hoveredRoom ? INDEX_OF[s.hoveredRoom] : -1;
     // The dimming keeps its centre while it fades out after the selection is cleared.
@@ -254,9 +282,15 @@ class LabelRig {
       const sx = (_p.x * 0.5 + 0.5) * W;
       const sy = (0.5 - _p.y * 0.5) * H;
       _p.set(wx, STEM_FOOT_Y, wz).project(cam);
-      this.floorX[i] = (_p.x * 0.5 + 0.5) * W;
-      this.floorY[i] = (0.5 - _p.y * 0.5) * H;
+      const fx = (_p.x * 0.5 + 0.5) * W;
+      const fy = (0.5 - _p.y * 0.5) * H;
+      this.floorX[i] = fx;
+      this.floorY[i] = fy;
       const onScreen = inFront && sx > free.x0 - EDGE && sx < free.x1 + EDGE && sy > free.y0 - EDGE && sy < free.y1 + EDGE;
+      // The room's floor centre is where a click picks it: no other room's pill may sit on it.
+      dc.keepX[i] = fx;
+      dc.keepY[i] = fy;
+      dc.keepOn[i] = pickable && _p.z < 1 && fx > free.x0 && fx < free.x1 && fy > free.y0 && fy < free.y1 ? 1 : 0;
 
       const orbit = smoothstep(ELEVATION_GONE, ELEVATION_FULL, Math.asin(THREE.MathUtils.clamp(-_dir.y / dist, -1, 1)));
       const look = 1 - smoothstep(LOOK_NEAR, LOOK_FAR, dist);
@@ -270,9 +304,9 @@ class LabelRig {
       const appear = reduced ? 1 : smoothstep(0, ENTER_FADE, sinceEnter - this.delay[i]);
       const want = onScreen ? this.master * appear * f : 0;
 
-      // Compact: a room much smaller on screen than its pill becomes a dot (with some hysteresis); pointed at, it is a pill.
+      // Compact: a room much smaller on screen than its pill becomes a dot; pointed at, it is a pill.
       const ratio = (ROOM_SIZE[i] * pxPerFtAtOne) / dist / this.pillW[i];
-      this.mini[i] = compact && !pointed && ratio < (this.mini[i] ? MINI_OUT : MINI_IN) ? 1 : 0;
+      this.mini[i] = compact && !pointed && ratio < MINI_AT ? 1 : 0;
       dc.w[i] = this.mini[i] ? MINI_SIZE : this.pillW[i];
       dc.h[i] = this.mini[i] ? MINI_SIZE : this.pillH[i];
 
@@ -335,12 +369,13 @@ class LabelRig {
     }
   }
 
-  /** The UI over the stage (data-label-obstacle) as keep-out rectangles in layer px. */
-  private readObstacles(): void {
+  /** The UI over the stage (data-label-obstacle) and the north compass as keep-out rectangles in layer px. */
+  private readObstacles(refresh: boolean): void {
     const dc = this.declutter;
-    if (this.frame++ % OBSTACLE_REFRESH === 0 || this.obstacleEls.some(disconnected)) {
-      this.obstacleEls = Array.from(document.querySelectorAll<HTMLElement>('[data-label-obstacle]')).slice(0, MAX_OBSTACLES);
+    if (refresh || this.obstacleEls.some(disconnected)) {
+      this.obstacleEls = Array.from(document.querySelectorAll<HTMLElement>('[data-label-obstacle]')).slice(0, MAX_OBSTACLES - 1);
     }
+    this.frame++;
     const origin = this.host?.getBoundingClientRect();
     let n = 0;
     if (origin) {
@@ -353,6 +388,14 @@ class LabelRig {
         dc.obstacles[n * 4 + 3] = r.bottom - origin.top + OBSTACLE_PAD;
         n++;
       }
+    }
+    // The north compass (ring + "N", where NorthArrow put it this frame, canvas px) while it is shown.
+    if (NORTH_ARROW_RECT.on) {
+      dc.obstacles[n * 4] = NORTH_ARROW_RECT.x0 - ARROW_PAD;
+      dc.obstacles[n * 4 + 1] = NORTH_ARROW_RECT.y0 - ARROW_PAD;
+      dc.obstacles[n * 4 + 2] = NORTH_ARROW_RECT.x1 + ARROW_PAD;
+      dc.obstacles[n * 4 + 3] = NORTH_ARROW_RECT.y1 + ARROW_PAD;
+      n++;
     }
     dc.obstacleCount = n;
   }
@@ -383,6 +426,61 @@ class LabelRig {
   }
 }
 
+/**
+ * The press that started on a pill or dot. A drag from there must orbit like a drag on the canvas, but the pill is not
+ * inside the element the camera controls listen on, and on a phone the browser would scroll the page instead (CSS gives
+ * the markers touch-action: none). So the press is re-sent to the canvas as a synthetic pointerdown (it bubbles to the
+ * controls; RoomPicking ignores it as it is not trusted): the controls then follow the real pointermove / pointerup
+ * events, which reach them through the document. `dragged` tells the click that follows a real drag from a tap.
+ */
+const press = { id: -1, x: 0, y: 0, slop: 0, dragged: false, stop: null as AbortController | null };
+
+function forward(canvas: HTMLElement, type: 'pointerdown' | 'pointercancel', e: PointerEvent): void {
+  canvas.dispatchEvent(
+    new PointerEvent(type, {
+      bubbles: true,
+      composed: true,
+      pointerId: e.pointerId,
+      pointerType: e.pointerType,
+      isPrimary: e.isPrimary,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      button: e.button,
+      buttons: e.buttons,
+      pressure: e.pressure,
+      width: e.width,
+      height: e.height,
+      ctrlKey: e.ctrlKey,
+      shiftKey: e.shiftKey,
+      altKey: e.altKey,
+      metaKey: e.metaKey,
+    }),
+  );
+}
+
+function startPress(e: ReactPointerEvent, canvas: HTMLElement | null): void {
+  if (e.pointerType === 'mouse' && e.button !== 0) return; // the right button trucks, and opens the context menu
+  press.stop?.abort();
+  const stop = (press.stop = new AbortController());
+  press.id = e.pointerId;
+  press.x = e.clientX;
+  press.y = e.clientY;
+  press.slop = e.pointerType === 'touch' ? TAP_SLOP.touch : TAP_SLOP.mouse;
+  press.dragged = false;
+  const opts = { signal: stop.signal, passive: true } as const;
+  window.addEventListener('pointermove', (m) => {
+    if (m.pointerId === press.id && Math.hypot(m.clientX - press.x, m.clientY - press.y) > press.slop) press.dragged = true;
+  }, opts);
+  const end = (u: PointerEvent) => {
+    if (u.pointerId === press.id) stop.abort();
+  };
+  window.addEventListener('pointerup', end, opts);
+  window.addEventListener('pointercancel', end, opts);
+  if (canvas) forward(canvas, 'pointerdown', e.nativeEvent);
+}
+
 function Pill({ room, index, rig }: { room: Room; index: number; rig: LabelRig }) {
   const hovered = useStore((s) => s.hoveredRoom === room.id);
   const selected = useStore((s) => s.selectedRoom === room.id);
@@ -396,7 +494,7 @@ function Pill({ room, index, rig }: { room: Room; index: number; rig: LabelRig }
     tabIndex: -1,
     'aria-label': room.name,
     onPointerEnter: (e: ReactPointerEvent) => {
-      if (e.pointerType === 'touch') return;
+      if (e.pointerType === 'touch' || e.buttons) return; // a drag passing over the pill must not light its room
       pillPointer.over = true;
       useStore.getState().setHoveredRoom(room.id);
     },
@@ -406,7 +504,15 @@ function Pill({ room, index, rig }: { room: Room; index: number; rig: LabelRig }
       const s = useStore.getState();
       if (s.hoveredRoom === room.id) s.setHoveredRoom(null);
     },
+    onPointerDown: (e: ReactPointerEvent) => startPress(e, rig.canvas),
+    onPointerCancel: (e: ReactPointerEvent) => {
+      if (rig.canvas) forward(rig.canvas, 'pointercancel', e.nativeEvent); // the controls end the drag they were given
+    },
     onClick: () => {
+      if (press.dragged) {
+        press.dragged = false; // the end of an orbit that started on the pill, not a tap
+        return;
+      }
       const s = useStore.getState();
       s.goRoom(room.id, s.camera.mode === 'look' ? 'eye' : 'overview');
     },
@@ -457,18 +563,21 @@ export function Labels() {
     host.setAttribute('aria-hidden', 'true');
     parent.appendChild(host);
     rig.host = host;
+    rig.canvas = gl.domElement;
     const root = createRoot(host);
     root.render(<LabelLayer rig={rig} />);
     return () => {
       root.unmount();
       host.remove();
       rig.host = null;
+      rig.canvas = null;
+      press.stop?.abort();
       pillPointer.over = false;
     };
   }, [gl, events, rig]);
 
   useEffect(() => () => rig.dispose(), [rig]);
 
-  useFrame((state, dt) => rig.update(state, dt));
+  useFrame((state) => rig.update(state));
   return null;
 }

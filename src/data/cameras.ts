@@ -206,8 +206,20 @@ export const FOV = { orbit: 32, look: 62 } as const;
 
 /** Desktop explorer side panel: the rig shifts the rendered image left by half of it. */
 export const PANEL_WIDTH = 360;
-/** Viewports narrower than this are "mobile" (matches the Tailwind md breakpoint and useIsMobile). */
+/** Viewports narrower than this are phones (matches the Tailwind md breakpoint: the top bar's burger menu, useIsMobile). */
 export const DESKTOP_MIN_WIDTH = 768;
+/** Portrait viewports up to this wide (portrait tablets, narrow tall windows) get the bottom sheet too: a 360 px side panel would leave the model a sliver. */
+export const SHEET_PORTRAIT_MAX_WIDTH = 1100;
+
+/**
+ * THE explorer layout rule: the bottom sheet for phones and portrait viewports up to SHEET_PORTRAIT_MAX_WIDTH wide, the side
+ * panel for everything else (landscape tablets and desktops; landscape phones fold the panel into a drawer, stageLayout
+ * isShortScreen). The camera framing (stageLayout.explorerFree, CameraRig) and the UI (lib/hooks useSheetLayout, which feeds
+ * ExplorerUI) both call this one function with the stage's size, so they cannot disagree. A square viewport counts as portrait,
+ * as in the CSS orientation media feature.
+ */
+export const isSheetLayout = (width: number, height: number): boolean =>
+  width < DESKTOP_MIN_WIDTH || (height >= width && width <= SHEET_PORTRAIT_MAX_WIDTH);
 
 /** Never dolly further than this multiple of the authored distance. */
 const MAX_FIT_DOLLY = 3.4;

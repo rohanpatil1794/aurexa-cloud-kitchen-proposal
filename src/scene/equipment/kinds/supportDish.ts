@@ -91,7 +91,7 @@ const dishMachine: KindBuilder = (b, it) => {
   b.box({ m: 'steel', c: STEEL_DARK, y: 5.9, w: it.w - 0.2, h: 0.12, d: it.d - 0.1 });
   b.cyl({ m: 'steel', c: STEEL_DARK, x: 0.55, y: 6.02, z: -0.5, r: 0.32, h: 0.28 });
   for (const s of [-1, 1]) {
-    b.box({ m: 'matte', c: '#1f272b', x: s * (hx + 0.012), y: 3.05, w: 0.04, h: 1.6, d: 1.75, shadow: false });
+    b.box({ m: 'matte', c: '#44515a', x: s * (hx + 0.012), y: 3.05, w: 0.04, h: 1.6, d: 1.75, shadow: false });
   }
   const front = hz - 0.1;
   b.box({ m: 'matte', c: INK, x: -0.1, y: 3.15, z: front + 0.012, w: 1.62, h: 1.52, d: 0.03, shadow: false });
@@ -109,7 +109,7 @@ const dishMachine: KindBuilder = (b, it) => {
 const dishSoiledTable: KindBuilder = (b, it) => {
   const back = -it.d / 2;
   bench(b, { w: it.w, d: it.d, h: 3, shelf: true, splash: true });
-  b.box({ m: 'matte', c: '#1d2326', x: -1.05, y: 3.0, z: 0.15, w: 0.7, h: 0.02, d: 0.6, shadow: false });
+  b.box({ m: 'matte', c: '#3b464c', x: -1.05, y: 3.0, z: 0.15, w: 0.7, h: 0.02, d: 0.6, shadow: false });
   stack(b, { x: -0.15, z: 0.15, y: 3.0, n: 9, r: 0.4, c: CERAMIC_SOILED });
   stack(b, { x: 0.45, z: -0.1, y: 3.0, n: 6, r: 0.4, c: CERAMIC_SOILED });
   trays(b, { x: 1.1, z: 0.1, y: 3.0, n: 3, w: 0.95, d: 0.7 });

@@ -3,7 +3,7 @@
 //   store.camera       a new `camera.id` means "go here" (fly, or jump when `instant`)
 //                      mode 'orbit'  normal orbit / dolly / truck
 //                      mode 'look'   eye level: the orbit target sits ~0.01 ft in front of the camera along
-//                                    the look direction, so dragging looks around in place, wheel/pinch zooms
+//                                    the look direction, so dragging looks around in place, zooming changes the lens
 //   store.autoOrbit    slow turntable around the current target, stops when the visitor drags the model
 //   store.phase        'explorer' shifts the image clear of the side panel (desktop) / bottom sheet (mobile);
 //                      the hero shifts it clear of the headline
@@ -15,6 +15,11 @@
 // Flights into, between and out of eye level are crane moves along a path (up over the walls, straight down onto the
 // spot), so they never cut through geometry; the lens changes late on the way in. The store remains the only public
 // API; `rig.controls` is there for non-React callers (debugging, screenshots).
+//
+// Zoom (explorer only; the plain wheel always belongs to the page, camera-controls' own wheel action is off): Ctrl / Cmd + wheel,
+// a trackpad pinch (browsers deliver it as Ctrl + wheel; Safari as gesture events) and the on-screen + / - buttons
+// (store.zoomStep) all end in zoomBy(): a smooth dolly towards / away from the target clamped to min / max distance in orbit
+// mode, the lens (camera zoom) in eye-level mode, a jump under prefers-reduced-motion. Touch pinch stays with camera-controls.
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { CameraControls } from '@react-three/drei';
@@ -45,6 +50,17 @@ const ORBIT_MAX_POLAR = { mouse: 80 * DEG, touch: 62 * DEG };
 const ORBIT_ROTATE_SPEED = { mouse: 0.8, touch: 0.4 };
 const ORBIT_MIN_DISTANCE = 12;
 const ORBIT_MAX_DISTANCE = 220;
+/** One press of the on-screen + / - changes the distance by this factor; one notch of Ctrl + wheel by WHEEL_STEP. */
+const ZOOM_STEP = 1.3;
+const WHEEL_STEP = 1.2;
+/** Trackpad pinch: many small wheel deltas (px, clipped per event) each zoom by e^(delta x rate). A delta of NOTCH_DELTA or more, or a line / page wheel, is a mouse notch. */
+const PINCH_RATE = 0.01;
+const PINCH_MAX_DELTA = 30;
+const NOTCH_DELTA = 50;
+/** The camera's resting glide (s). Zooming eases faster than that, so a pinch tracks the fingers; the glide is restored this long (ms) after the last zoom. */
+const REST_SMOOTH_S = 0.6;
+const ZOOM_SMOOTH_S = 0.25;
+const ZOOM_SMOOTH_HOLD_MS = 700;
 /** The orbit target may truck anywhere over the plinth and a little beyond. */
 const TARGET_BOUNDS = new THREE.Box3(new THREE.Vector3(-30, 0, -30), new THREE.Vector3(90, 30, 90));
 /** Window resizes refit the camera once they have settled for this long (ms). */
@@ -113,6 +129,9 @@ export function CameraRig() {
     poseMaxPolar: 0,
     /** The visitor has orbited / zoomed since the camera last went somewhere: resizes then leave the explorer camera alone. */
     userMoved: false,
+    /** Eye level: the lens zoom the last zoom step is heading for, and when it was asked (it is re-read from the camera once that is long ago). */
+    zoomGoal: 1,
+    zoomAt: 0,
     /** The visitor stopped the hero turntable (and when they last touched the model): it starts again after a pause. */
     userStoppedAuto: false,
     lastControl: 0,
@@ -133,7 +152,7 @@ export function CameraRig() {
     rig.controls = controls;
     if (import.meta.env.DEV) (window as unknown as { __rig?: unknown }).__rig = controls;
 
-    controls.smoothTime = 0.6;
+    controls.smoothTime = REST_SMOOTH_S;
     controls.draggingSmoothTime = 0.12;
     controls.restThreshold = 0.005;
     controls.dollyToCursor = false; // the view offset would skew cursor-anchored zoom
@@ -146,7 +165,7 @@ export function CameraRig() {
     /** Layout class: a change reframes from the authored pose, anything else refits the current heading. */
     const layoutKey = () => {
       const { w, h } = size();
-      return `${isSheetLayout(w)}|${w < h}`;
+      return `${isSheetLayout(w, h)}|${w < h}`;
     };
     let lastKey = layoutKey();
 
@@ -164,7 +183,7 @@ export function CameraRig() {
         controls.mouseButtons.left = ACTION.ROTATE;
         controls.mouseButtons.right = ACTION.NONE;
         controls.mouseButtons.middle = ACTION.NONE;
-        controls.mouseButtons.wheel = ACTION.ZOOM;
+        controls.mouseButtons.wheel = ACTION.NONE; // zoomBy handles Ctrl / Cmd + wheel
         controls.touches.one = ACTION.TOUCH_ROTATE;
         controls.touches.two = ACTION.TOUCH_ZOOM;
         controls.touches.three = ACTION.NONE;
@@ -175,8 +194,9 @@ export function CameraRig() {
         controls.mouseButtons.left = ACTION.ROTATE;
         controls.mouseButtons.right = ACTION.TRUCK;
         controls.mouseButtons.middle = ACTION.DOLLY;
-        // The hero is part of a scrolling page: leave the wheel to the page until the explorer is entered.
-        controls.mouseButtons.wheel = useStore.getState().phase === 'explorer' ? ACTION.DOLLY : ACTION.NONE;
+        // The stage is a sticky section of a scrolling page: the plain wheel always scrolls it (camera-controls would
+        // preventDefault a wheel it handles). Ctrl / Cmd + wheel and pinch zoom through zoomBy below.
+        controls.mouseButtons.wheel = ACTION.NONE;
         controls.touches.one = ACTION.TOUCH_ROTATE;
         controls.touches.two = ACTION.TOUCH_DOLLY_TRUCK;
         controls.touches.three = ACTION.TOUCH_TRUCK;
@@ -206,6 +226,66 @@ export function CameraRig() {
       }
     };
     controls.addEventListener('control', onUserControl);
+
+    // ---- zoom: Ctrl / Cmd + wheel, pinch, the on-screen + / - ----------------------------------------
+    let smoothTimer = 0;
+    /** Zoom by `factor` (> 1 = closer / a longer lens) from where the camera is heading, not where it is, so quick steps add up. */
+    const zoomBy = (factor: number) => {
+      const s = useStore.getState();
+      if (s.phase !== 'explorer' || st.flight || s.cameraPath || !controls.enabled) return;
+      const animate = !s.reducedMotion;
+      if (animate) {
+        controls.smoothTime = ZOOM_SMOOTH_S;
+        window.clearTimeout(smoothTimer);
+        smoothTimer = window.setTimeout(() => { controls.smoothTime = REST_SMOOTH_S; }, ZOOM_SMOOTH_HOLD_MS);
+      }
+      const now = performance.now();
+      if (st.mode === 'look') {
+        if (now - st.zoomAt > ZOOM_SMOOTH_HOLD_MS || Math.abs(cam.zoom - st.zoomGoal) < 1e-3) st.zoomGoal = cam.zoom;
+        st.zoomGoal = THREE.MathUtils.clamp(st.zoomGoal * factor, controls.minZoom, controls.maxZoom);
+        void controls.zoomTo(st.zoomGoal, animate);
+      } else {
+        controls.getPosition(_pos, true);
+        controls.getTarget(_tgt, true);
+        void controls.dollyTo(THREE.MathUtils.clamp(_pos.distanceTo(_tgt) / factor, controls.minDistance, controls.maxDistance), animate);
+      }
+      st.zoomAt = now;
+      st.userMoved = true;
+      st.lastControl = get().clock.elapsedTime;
+      get().invalidate();
+    };
+
+    // Over the model (never over the panel, sheet or other UI, which keep the browser's own page zoom) Ctrl / Cmd + wheel
+    // zooms the model instead of the page.
+    const stageEl = dom.closest<HTMLElement>('#stage') ?? dom;
+    const overModel = (e: Event) => useStore.getState().phase === 'explorer' && !!(e.target as Element | null)?.closest?.('.stage-canvas');
+    const onWheel = (e: WheelEvent) => {
+      if ((!e.ctrlKey && !e.metaKey) || !overModel(e)) return; // the plain wheel scrolls the page
+      e.preventDefault();
+      const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+      if (px === 0) return;
+      const notch = e.deltaMode !== 0 || Math.abs(px) >= NOTCH_DELTA;
+      zoomBy(notch ? WHEEL_STEP ** -Math.sign(px) : Math.exp(-THREE.MathUtils.clamp(px, -PINCH_MAX_DELTA, PINCH_MAX_DELTA) * PINCH_RATE));
+    };
+    stageEl.addEventListener('wheel', onWheel, { passive: false, capture: true });
+
+    // Safari on a Mac sends the trackpad pinch as gesture events (not Ctrl + wheel). Touch screens pinch through camera-controls.
+    let gestureScale = 1;
+    const trackpad = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const onGestureStart = (e: Event) => {
+      if (!overModel(e) || !trackpad()) return;
+      e.preventDefault();
+      gestureScale = 1;
+    };
+    const onGestureChange = (e: Event) => {
+      if (!overModel(e) || !trackpad()) return;
+      e.preventDefault();
+      const scale = (e as Event & { scale: number }).scale;
+      if (scale > 0 && gestureScale > 0) zoomBy(scale / gestureScale);
+      gestureScale = scale;
+    };
+    stageEl.addEventListener('gesturestart', onGestureStart, { passive: false });
+    stageEl.addEventListener('gesturechange', onGestureChange, { passive: false });
 
     /** The camera's pose right now (also mid-flight): its position, and what it looks at (AHEAD ft ahead at eye level). */
     const currentKey = (): CameraKeyframe => {
@@ -388,6 +468,7 @@ export function CameraRig() {
 
     apply(useStore.getState().camera, 'request');
     const unsub = useStore.subscribe((s, prev) => {
+      if (s.zoomStep !== prev.zoomStep) zoomBy(ZOOM_STEP ** s.zoomStep.dir);
       if (s.camera !== prev.camera) queueApply('request');
       else if (s.phase !== prev.phase) queueApply(prev.phase === 'loading' ? 'settle' : 'reframe');
       // The phone sheet moved between peek and half: the strip it leaves free changed size. (Full is framed like half.)
@@ -414,6 +495,11 @@ export function CameraRig() {
     return () => {
       unsub();
       window.clearTimeout(resizeTimer);
+      window.clearTimeout(smoothTimer);
+      controls.smoothTime = REST_SMOOTH_S;
+      stageEl.removeEventListener('wheel', onWheel, { capture: true });
+      stageEl.removeEventListener('gesturestart', onGestureStart);
+      stageEl.removeEventListener('gesturechange', onGestureChange);
       window.removeEventListener('resize', onResize);
       dom.removeEventListener('pointerdown', onPointerDown);
       controls.removeEventListener('control', onUserControl);

@@ -22,14 +22,14 @@ const SWATCHES: Swatch[] = [
   { name: 'Slate', hex: BRAND.slate, role: 'Cool neutral for utility spaces', onDark: true },
   { name: 'Steel', hex: BRAND.steelMid, role: 'Stainless steel and concrete' },
   { name: 'Mist', hex: BRAND.steelLight, role: 'Light steel and glass' },
-  { name: 'Black', hex: BRAND.black, role: 'The logo, and the Orders Out flow', onDark: true },
+  { name: 'Black', hex: BRAND.black, role: 'The logo, and the Orders out flow', onDark: true },
   { name: 'White', hex: BRAND.white, role: 'Clean surfaces and the logo' },
 ];
 
 const MATERIALS: { name: string; why: string; swatch: ReactNode }[] = [
   {
     name: 'Stainless steel',
-    why: 'Benches, sinks, racks and hoods. Non-porous and easy to sanitise, it is the working surface of a professional kitchen.',
+    why: 'Benches, sinks, racks and hoods. Non-porous and simple to disinfect, it is the working surface of a professional kitchen.',
     swatch: <span className="prop-mat prop-mat--steel" />,
   },
   {
@@ -49,7 +49,7 @@ const MATERIALS: { name: string; why: string; swatch: ReactNode }[] = [
   },
   {
     name: 'Greenery',
-    why: 'The Indoor Garden, with its glazed walls and skylight, brings plants and daylight into the heart of the plan.',
+    why: 'The Indoor Garden, with its glazed walls and skylight, brings plants and daylight into the building.',
     swatch: (
       <span className="prop-mat prop-mat--leaf">
         <svg viewBox="0 0 72 72" aria-hidden="true">

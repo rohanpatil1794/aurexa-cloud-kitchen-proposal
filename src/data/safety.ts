@@ -2,7 +2,10 @@
 // Nothing is hand-placed: the tables below only say WHAT goes WHERE (per room / per opening), the code finds the spot.
 //
 //   extinguisher  inside every room with a fire load, on the wall beside its main door (all four doors of the kitchen);
-//                 in circulation, a station every STATION_SPACING ft of corridor and beside the fire-stair door
+//                 beside the fire-stair door; then a coverage pass adds one wherever a door of ANY room, corridor or exit
+//                 has none within EXTINGUISHER_REACH ft (straight line, one of the door's two sides, no equipment in the
+//                 way; one may serve two adjacent doors); in circulation, a station every STATION_SPACING ft of corridor
+//                 unless one is already close. scripts/validate-layout.ts section 9 fails if a door is left uncovered.
 //   smoke         ceiling, every room (two in the kitchen);   heat  ceiling, kitchen (2 x 2) and bakery
 //   lpg           low on the walls that run beside the kitchen gas ring main (LPG is heavier than air)
 //   gasvalve      emergency shut-off on the ring's riser beside the kitchen west door
@@ -12,9 +15,27 @@
 // Wall-hung items only take spots that are on solid wall, clear of every door (3 ft landing), glazing and
 // floor-standing equipment. Spots on walls the aerial camera cannot see are used only when no visible one is close.
 import type { EquipItem, Opening, SafetyKind, SafetyPoint, Side, SpaceId, Vec2 } from './types';
-import { CIRCULATION, DOORS, FOOTPRINT, GAS_RING, OPENINGS, PASSENGER_LIFT, ROOMS, WALL, roomAt } from './layout';
+import { CIRCULATION, DOORS, FOOTPRINT, GAS_RING, OPENINGS, PASSENGER_LIFT, ROOMS, WALL, openingPoint, roomAt } from './layout';
 import { EQUIPMENT } from './equipment';
 import { BIN_COLORS, BRAND } from '../lib/palette';
+
+/** Furthest an extinguisher may be from a door it serves, ft in a straight line in plan: every walk-through opening has one. */
+export const EXTINGUISHER_REACH = 10;
+
+/**
+ * Resting ground position (ft, the compass centre; x east, z south) of the north arrow:
+ *   wide     the explorer on a wide stage: well east of the north-east corner, clear of the room pills (they float at the wall tops);
+ *   hero     the hero on a wide stage (no pills there): closer to the corner;
+ *   compact  a stage narrower than 720 px (phones, narrow windows): above the corner, where there is free sky but no free side.
+ * The arrow keeps a steady size on screen and is clamped into the free part of the canvas, so on small screens its real
+ * spot can differ: where it really is on screen is NORTH_ARROW_RECT (scene/layers/NorthArrow.tsx).
+ */
+const PLINTH_EAST = FOOTPRINT.w + WALL.plinthMargin;
+export const NORTH_ARROW_POS = {
+  wide: { x: PLINTH_EAST + 28, z: 3.5 },
+  hero: { x: PLINTH_EAST + 15, z: 3.5 },
+  compact: { x: PLINTH_EAST + 9, z: -9 },
+} as const;
 
 // ---------------------------------------------------------------------------
 // Legend metadata (shared by the 3D layer and the legend)
@@ -33,7 +54,7 @@ export interface SafetyKindInfo {
 }
 
 export const SAFETY_KINDS: SafetyKindInfo[] = [
-  { kind: 'extinguisher', label: 'ABC extinguisher', short: 'Fire ext.', detail: 'Beside every door cluster', color: BIN_COLORS.red },
+  { kind: 'extinguisher', label: 'ABC extinguisher', short: 'Fire ext.', detail: `Within ${EXTINGUISHER_REACH} ft of every door`, color: BIN_COLORS.red },
   { kind: 'smoke', label: 'Smoke detector', short: 'Smoke', detail: 'Ceiling, every room', color: BRAND.tealLight },
   { kind: 'heat', label: 'Heat detector', short: 'Heat', detail: 'Kitchen and bakery', color: BRAND.orange },
   { kind: 'lpg', label: 'LPG leak detector', short: 'LPG leak', detail: 'Low-mounted, LPG sinks', color: BIN_COLORS.blue },
@@ -51,6 +72,10 @@ const NO_EXTINGUISHER = new Set<SpaceId>(['stair', 'lift', 'toilets', 'garden', 
 const PER_DOOR = new Set<SpaceId>(['kitchen']);
 /** Furthest an in-room extinguisher may hang from its door, ft. */
 const INSIDE_REACH = 6;
+/** The coverage pass first looks for an extinguisher this close to the doors it serves (so one can stand between two adjacent doors), ft. */
+const COVER_NEAR = 7;
+/** Clear distance kept between two extinguishers, ft; the coverage pass drops it to the minimum below when nothing else fits. */
+const EXT_GAP = 2.5;
 /** Corridor stretch covered by one extinguisher station, ft. */
 const STATION_SPACING = 30;
 /** Ceiling-mounted items hang this far below the slab underside, ft (centre height). */
@@ -124,6 +149,48 @@ const OBSTACLES: Box[] = [
   { x0: PASSENGER_LIFT.x, x1: PASSENGER_LIFT.x + PASSENGER_LIFT.w, z0: PASSENGER_LIFT.z, z1: PASSENGER_LIFT.z + PASSENGER_LIFT.d },
 ];
 
+/** Does the plan segment a -> b pass through the interior of box `k`? (touching or grazing a face is not a hit) */
+function segmentCrossesBox(ax: number, az: number, bx: number, bz: number, k: Box): boolean {
+  // cheap reject: the segment's bounding box misses the box
+  if (Math.max(ax, bx) <= k.x0 || Math.min(ax, bx) >= k.x1 || Math.max(az, bz) <= k.z0 || Math.min(az, bz) >= k.z1) return false;
+  let t0 = 0, t1 = 1;
+  const dx = bx - ax, dz = bz - az;
+  if (Math.abs(dx) < 1e-12) {
+    if (ax <= k.x0 + 1e-9 || ax >= k.x1 - 1e-9) return false;
+  } else {
+    const ta = (k.x0 - ax) / dx, tb = (k.x1 - ax) / dx;
+    t0 = Math.max(t0, Math.min(ta, tb));
+    t1 = Math.min(t1, Math.max(ta, tb));
+  }
+  if (Math.abs(dz) < 1e-12) {
+    if (az <= k.z0 + 1e-9 || az >= k.z1 - 1e-9) return false;
+  } else {
+    const ta = (k.z0 - az) / dz, tb = (k.z1 - az) / dz;
+    t0 = Math.max(t0, Math.min(ta, tb));
+    t1 = Math.min(t1, Math.max(ta, tb));
+  }
+  return t1 - t0 > 1e-9;
+}
+
+/**
+ * Straight-line distance (ft) from an extinguisher standing at (x, z) in `space` to the centre of door `o`, or Infinity when it
+ * does not serve it: it must be in one of the two spaces the door joins (so no wall or glazing is on the line), within
+ * EXTINGUISHER_REACH (less a hair for rounding), and no floor-standing equipment may be on the line to the door (taken to the
+ * wall face on the extinguisher's side, where a person stands to use it: the centre line of a thick wall is inside the wall).
+ */
+function reach(x: number, z: number, space: SpaceId | undefined, o: Opening): number {
+  if (!space || !o.rooms?.includes(space)) return Infinity;
+  const [dx, dz] = openingPoint(o);
+  const d = Math.hypot(x - dx, z - dz);
+  if (d > EXTINGUISHER_REACH - 0.05) return Infinity;
+  const horizontal = o.wall === 'h';
+  const half = halfThickness(horizontal ? 'N' : 'W', o.at);
+  const sign = (horizontal ? z : x) >= o.at ? 1 : -1;
+  const tx = horizontal ? dx : dx + sign * half;
+  const tz = horizontal ? dz + sign * half : dz;
+  return OBSTACLES.some((k) => segmentCrossesBox(x, z, tx, tz, k)) ? Infinity : d;
+}
+
 // ---- wall spots -----------------------------------------------------------------
 interface Spot { x: number; z: number; side: Side; space: Space }
 
@@ -187,11 +254,12 @@ function blocked(x: number, z: number, wall: 'h' | 'v', line: number, a: number,
 const distance = (s: Spot, p: Vec2) => Math.hypot(s.x - p[0], s.z - p[1]);
 
 /** The spot closest to `target`; spots on walls the aerial cannot see count as HIDDEN_PENALTY ft further away. */
-function nearest(spots: readonly Spot[], target: Vec2, skip: readonly Vec2[] = [], gap = 2.5): Spot | undefined {
+function nearest(spots: readonly Spot[], target: Vec2, skip: readonly Vec2[] = [], gap = 2.5, accept?: (s: Spot) => boolean): Spot | undefined {
   let best: Spot | undefined;
   let bestScore = Infinity;
   for (const s of spots) {
     if (skip.some(([px, pz]) => Math.hypot(s.x - px, s.z - pz) < gap)) continue;
+    if (accept && !accept(s)) continue;
     const score = distance(s, target) + (AERIAL_SIDES.has(s.side) ? 0 : HIDDEN_PENALTY);
     if (score < bestScore) { bestScore = score; best = s; }
   }
@@ -252,8 +320,11 @@ export function generateSafetyPoints(): SafetyPoint[] {
   // ---- extinguishers ----------------------------------------------------------
   const extSpots: Vec2[] = [];
   const corridorExt: Vec2[] = [];
+  /** Every extinguisher placed so far, with the space it stands in (what reach() needs). */
+  const placed: { x: number; z: number; space: SpaceId }[] = [];
   const addExtinguisher = (spot: Spot) => {
     extSpots.push([spot.x, spot.z]);
+    placed.push({ x: spot.x, z: spot.z, space: spot.space.id });
     if (!spot.space.room) corridorExt.push([spot.x, spot.z]);
     add('extinguisher', spot.x, spot.z, MOUNTS.extinguisher.y, { rot: FACING[spot.side], room: spot.space.id, label: `ABC extinguisher, ${spot.space.name}` });
   };
@@ -263,16 +334,20 @@ export function generateSafetyPoints(): SafetyPoint[] {
     const doors = DOORS.filter((o) => o.rooms?.includes(room.id));
     // One per room beside the door that opens onto circulation (first door otherwise); the kitchen gets one per door.
     const main = doors.find((o) => isCirculation(otherSpace(o, room.id))) ?? doors[0];
-    const chosen = PER_DOOR.has(room.id) ? doors : main ? [main] : [];
+    const perDoor = PER_DOOR.has(room.id);
+    const chosen = perDoor ? doors : main ? [main] : [];
     const spots = wallSpots(spaceById(room.id), MOUNTS.extinguisher);
     for (const o of chosen) {
-      const door: Vec2 = o.wall === 'h' ? [o.c, o.at] : [o.at, o.c];
-      let spot = nearest(spots, door, extSpots);
+      const door = openingPoint(o);
+      const serves = (s: Spot) => reach(s.x, s.z, s.space.id, o) < Infinity;
+      // The kitchen's four hang on the nearest free wall in the room whether or not the line to the door is clear (its line
+      // of appliances fills the north wall: the corridor side covers those two doors). Any other room's extinguisher must
+      // serve its door: close to it, with nothing in between.
+      let spot = nearest(spots, door, extSpots, EXT_GAP, perDoor ? undefined : (s) => serves(s) && distance(s, door) <= INSIDE_REACH);
       const outside = otherSpace(o, room.id);
-      // A fully fitted room can leave no wall within reach of its door: then it hangs in the corridor, beside the door
-      // (the kitchen's four stay inside it).
-      if ((!spot || distance(spot, door) > INSIDE_REACH) && isCirculation(outside) && !PER_DOOR.has(room.id)) {
-        spot = nearest(wallSpots(spaceById(outside!), MOUNTS.extinguisher), door, extSpots) ?? spot;
+      // A fully fitted room can leave no wall within reach of its door: then it hangs in the corridor, beside the door.
+      if (!spot && !perDoor && isCirculation(outside)) {
+        spot = nearest(wallSpots(spaceById(outside!), MOUNTS.extinguisher), door, extSpots, EXT_GAP, serves);
       }
       if (spot) addExtinguisher(spot);
     }
@@ -282,12 +357,39 @@ export function generateSafetyPoints(): SafetyPoint[] {
   const stairDoor = DOORS.find((o) => o.rooms?.includes('stair'));
   if (stairDoor) {
     const corridor = otherSpace(stairDoor, 'stair');
-    const spot = corridor && nearest(wallSpots(spaceById(corridor), MOUNTS.extinguisher), [stairDoor.c, stairDoor.at], extSpots);
+    const spot = corridor && nearest(wallSpots(spaceById(corridor), MOUNTS.extinguisher), openingPoint(stairDoor), extSpots);
     if (spot) addExtinguisher(spot);
   }
 
+  // Coverage: every door of every room, corridor and exit gets an extinguisher within EXTINGUISHER_REACH (the brief). Greedy: the
+  // free wall spot, on either side of a door still uncovered, that serves the most of them (close ones first, so one stands
+  // between two adjacent doors rather than 9 ft from each), then the nearest to them and, in a tie, on a wall the aerial sees.
+  const serving = (o: Opening) => placed.some((e) => reach(e.x, e.z, e.space, o) < Infinity);
+  for (let pass = 0; pass < DOORS.length; pass++) {
+    const open = DOORS.filter((o) => !serving(o));
+    if (!open.length) break;
+    const sides = new Set(open.flatMap((o) => o.rooms ?? []).filter((id) => SPACES.some((p) => p.id === id)));
+    let best: Spot | undefined;
+    for (const [limit, gap] of [[COVER_NEAR, EXT_GAP], [EXTINGUISHER_REACH, EXT_GAP], [EXTINGUISHER_REACH, 1]] as const) {
+      let bestScore = -Infinity;
+      for (const id of sides) {
+        for (const s of wallSpots(spaceById(id), MOUNTS.extinguisher)) {
+          if (extSpots.some(([px, pz]) => Math.hypot(s.x - px, s.z - pz) < gap)) continue;
+          const ds = open.map((o) => reach(s.x, s.z, s.space.id, o)).filter((d) => d <= limit);
+          if (!ds.length) continue;
+          const cost = ds.reduce((acc, d) => acc + d, 0) / ds.length + (AERIAL_SIDES.has(s.side) ? 0 : HIDDEN_PENALTY);
+          const score = ds.length * 100 - cost;
+          if (score > bestScore) { bestScore = score; best = s; }
+        }
+      }
+      if (best) break;
+    }
+    if (!best) break; // nothing fits: scripts/validate-layout.ts section 9 reports the doors left uncovered
+    addExtinguisher(best);
+  }
+
   // Corridor stations: every STATION_SPACING ft of corridor, and one at the entrance lobby, unless a corridor extinguisher
-  // (the stair's, or one standing in for a fully fitted room) is already within a quarter of that.
+  // (the stair's, one standing in for a fully fitted room or one added for a door) is already within a quarter of that.
   for (const c of CIRCULATION) {
     const long = Math.max(c.w, c.d);
     const lobby = OPENINGS.some((o) => o.rooms?.includes(c.id) && o.rooms.includes('outside'));
@@ -399,3 +501,31 @@ export const SAFETY_COUNTS = SAFETY_KINDS.reduce(
   (acc, { kind }) => ({ ...acc, [kind]: SAFETY_POINTS.filter((p) => p.kind === kind).length }),
   {} as Record<SafetyKind, number>,
 );
+
+/** The nearest extinguisher that serves each walk-through opening (see reach()): the data behind "one within EXTINGUISHER_REACH of every door". */
+export interface DoorCover {
+  door: string;
+  /** Id of the nearest serving extinguisher, or undefined when the door is not covered. */
+  extinguisher?: string;
+  /** Straight-line distance to it, ft. */
+  ft: number;
+}
+export const DOOR_COVER: DoorCover[] = DOORS.map((o) => {
+  let best: DoorCover = { door: o.id, ft: Infinity };
+  for (const p of SAFETY_POINTS) {
+    if (p.kind !== 'extinguisher') continue;
+    const d = reach(p.x, p.z, p.room, o);
+    if (d < best.ft) best = { door: o.id, extinguisher: p.id, ft: Math.round(d * 10) / 10 };
+  }
+  return best;
+});
+
+/** Figures for the proposal copy, all derived: how many doors, how many are covered, how far the furthest is, how many hang in the kitchen. */
+export const EXTINGUISHER_COVERAGE = {
+  reachFt: EXTINGUISHER_REACH,
+  doors: DOORS.length,
+  covered: DOOR_COVER.filter((c) => c.extinguisher).length,
+  /** The longest straight line from any door to the extinguisher that serves it, ft. */
+  farthestFt: DOOR_COVER.reduce((m, c) => (c.extinguisher ? Math.max(m, c.ft) : m), 0),
+  kitchen: SAFETY_POINTS.filter((p) => p.kind === 'extinguisher' && p.room === 'kitchen').length,
+};

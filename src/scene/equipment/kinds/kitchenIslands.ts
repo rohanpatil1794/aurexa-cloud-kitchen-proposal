@@ -129,7 +129,7 @@ registerKinds({
     // wok = flared bowl (flipped cone), steel rim and dark interior
     b.cone({ m: 'steel', c: WOK_STEEL, y: TOP + 0.58, r: 0.66, h: 0.42, rx: 180 });
     b.cyl({ m: 'steel', c: STEEL, y: TOP + 0.97, r: 0.69, h: 0.05 });
-    b.cyl({ m: 'matte', c: '#171c1e', y: TOP + 1.02, r: 0.6, h: 0.01, shadow: false });
+    b.cyl({ m: 'matte', c: '#2c363b', y: TOP + 1.02, r: 0.6, h: 0.01, shadow: false });
     b.pipe({ m: 'steel', c: STEEL_DARK, a: [0, TOP + 0.99, 0.62], b: [0, TOP + 1.1, 1.25], r: 0.04 });
     b.pipe({ m: 'matte', c: WOOD, a: [0, TOP + 1.1, 1.0], b: [0, TOP + 1.12, 1.25], r: 0.06 });
     // gooseneck water tap behind the wok
@@ -184,7 +184,7 @@ registerKinds({
     b.box({ m: 'steel', c: STEEL, y: TOP, z: -1.35, w, h: 0.8, d: 0.3 });
     // oven door, window, handle and control strip with four knobs
     b.box({ m: 'steel', c: STEEL, x: 0, y: 0.45, z: 1.52, w: w - 0.4, h: 1.4, d: 0.05 });
-    b.box({ m: 'matte', c: '#20272a', y: 0.75, z: 1.56, w: w - 1.2, h: 0.7, d: 0.02, shadow: false });
+    b.box({ m: 'matte', c: '#37424a', y: 0.75, z: 1.56, w: w - 1.2, h: 0.7, d: 0.02, shadow: false });
     b.box({ m: 'matte', c: CHARCOAL, y: 1.78, z: 1.6, w: w - 0.9, h: 0.07, d: 0.08, shadow: false });
     b.box({ m: 'steel', c: STEEL_DARK, y: 2.15, z: 1.5, w: w - 0.1, h: 0.55, d: 0.06 });
     for (let i = 0; i < 4; i++) b.cyl({ m: 'matte', c: CHARCOAL, x: -1.05 + i * 0.7, y: 2.37, z: 1.58, r: 0.09, h: 0.1, rx: 90, shadow: false });
@@ -344,7 +344,7 @@ registerKinds({
     b.box({ m: 'steel', c: STEEL, y: 3.1, z: -d / 2 + 0.03, w, h: 1.15, d: 0.05 });
     b.box({ m: 'steel', c: STEEL_DARK, y: 2.35, z: -d / 2 + 0.15, w: 0.3, h: 0.5, d: 0.2 });
     b.box({ m: 'steel', c: STEEL, x: -0.2, y: 2.8, z: -d / 2 + 0.45, w: 1.05, h: 0.3, d: 0.8 });
-    b.box({ m: 'matte', c: '#1f2629', x: -0.2, y: 3.06, z: -d / 2 + 0.45, w: 0.9, h: 0.02, d: 0.65, shadow: false });
+    b.box({ m: 'matte', c: '#3a4349', x: -0.2, y: 3.06, z: -d / 2 + 0.45, w: 0.9, h: 0.02, d: 0.65, shadow: false });
     const tz = -d / 2 + 0.16;
     b.pipe({ a: [-0.2, 3.1, tz], b: [-0.2, 3.7, tz], r: 0.035 });
     b.pipe({ a: [-0.2, 3.7, tz], b: [-0.2, 3.7, tz + 0.4], r: 0.035 });
@@ -355,14 +355,14 @@ registerKinds({
 
   // Round floor drain (dark flat decal with a grate).
   'kitchenIslands.drain': (b, it) => {
-    b.cyl({ m: 'matte', c: '#2c3438', y: 0.03, r: it.w / 2 - 0.05, h: 0.02, shadow: false });
+    b.cyl({ m: 'matte', c: '#3f4a50', y: 0.03, r: it.w / 2 - 0.05, h: 0.02, shadow: false });
     b.box({ m: 'steel', c: '#6d7a82', y: 0.05, w: it.w - 0.25, h: 0.012, d: 0.05, shadow: false });
     b.box({ m: 'steel', c: '#6d7a82', y: 0.05, w: 0.05, h: 0.012, d: it.w - 0.25, shadow: false });
   },
 
   // Linear drain channel with grating, along the front of the pass.
   'kitchenIslands.channel': (b, it) => {
-    b.box({ m: 'matte', c: '#2c3438', y: 0.03, w: it.w, h: 0.02, d: it.d, shadow: false });
+    b.box({ m: 'matte', c: '#3f4a50', y: 0.03, w: it.w, h: 0.02, d: it.d, shadow: false });
     b.box({ m: 'steel', c: '#7d8a92', y: 0.05, w: it.w - 0.14, h: 0.012, d: it.d - 0.14, shadow: false });
   },
 });

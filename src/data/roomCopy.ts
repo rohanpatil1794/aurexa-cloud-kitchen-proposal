@@ -2,7 +2,11 @@
 // Written to match src/data/layout.ts (doors, adjacencies) and the modelled equipment (src/data/equipment/*).
 // If a door or an item moves, re-read the notes for that room.
 // Rules: no metrics and no dimensions (the card shows the size); the only numbers are facts of the plan itself
-// (door counts, station counts). Purpose stays under about 100 characters so it holds two lines on a phone.
+// (door counts, station counts). Purpose at most 170 characters, each note at most 110, two or three notes per room.
+// Spelling: British throughout, except the dishwashing stage name 'Sanitize' (data/layout.ts DISH_STAGES), used as is.
+// Naming: rooms by their layout.ts name (the short forms Receiving, Packing and Dispatch are fine in running text, but
+// the Rider Waiting Area is always in full); corridors, the spine and the lobby are lowercase generic nouns; flows keep
+// their flows.ts names (Raw material, Staff, Dirty, utensils & waste, Orders out).
 import type { RoomCopy, RoomId } from './types';
 
 export const ROOM_COPY: Record<RoomId, RoomCopy> = {
@@ -10,7 +14,7 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
     purpose: 'The escape stair in the north-west corner. One door, one purpose: an enclosed way out.',
     notes: [
       'Enclosed behind a single door onto the top corridor, so it stays apart from the working floor.',
-      'At the west end of the top corridor, which runs the full width: a straight run for every north-side room.',
+      'At the west end of the full-width top corridor: every room that opens onto it has a straight run here.',
       'Dog-leg flight with a half-landing, an EXIT sign above the door and plain concrete underfoot.',
     ],
   },
@@ -25,7 +29,7 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
   },
 
   jain: {
-    purpose: 'Jain cooking has its own ingredient rules, so it gets its own yellow room, bench, boards and bins.',
+    purpose: 'Jain cooking has its own ingredient rules, so it gets its own yellow room, benches, boards and bins.',
     notes: [
       'Between Veg and Vegan prep, with a solid wall on each side and its only door on the top corridor.',
       'Yellow on the floor, the boards and the bins: staff can tell at a glance whose room they are in.',
@@ -64,13 +68,13 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
     purpose: 'Chilled storage for all four diets under one roof, with every fridge kept to its own zone.',
     notes: [
       'Four tall fridges, one per diet, in the zone colours: green, yellow, purple and red.',
-      'A walk-in cold room on the east side holds bulk chilled stock. The only door faces the top corridor.',
+      'A walk-in cold room on the east side holds bulk stock. The room’s one door opens onto the top corridor.',
       'A steel floor finish washes down easily and reads clearly as cold, clean space.',
     ],
   },
 
   dry: {
-    purpose: 'Shelf-stable goods in crates on steel racking, with its own door through to Receiving.',
+    purpose: 'Shelf-stable goods on steel racking, with a door straight through to Receiving.',
     notes: [
       'A door onto the top corridor links it to prep, the bakery and the kitchen.',
       'A door straight through to Receiving, with pallets staged beside it, is the short way in for deliveries.',
@@ -117,7 +121,7 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
     purpose: 'The heart of the plan: a back cooking line, a wok station, four cuisine islands and a long pass.',
     notes: [
       'Four islands: Indian (tandoor), Chinese (wok burners), Continental (flat-top) and European (ranges).',
-      'One stainless hood spans the back line and wok station; an emergency gas shut-off sits by the west door.',
+      'One stainless hood spans the back line and wok station; the gas shut-off is just outside the west door.',
       'Ingredients come in from the top corridor; finished dishes leave through the pass to the bottom corridor.',
     ],
   },
@@ -126,17 +130,17 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
     purpose: 'Every dirty dish returns here and leaves clean: five stages, one direction, collection to storage.',
     notes: [
       'On the return corridor, straight across from the kitchen’s east door: dirty ware skips the cooking floor.',
-      'Stages run in order: dirty collection, wash, sanitise, dry, storage.',
-      'A second door onto the staff spine lets staff in and clean ware out, without entering the kitchen.',
+      'Stages run in order: dirty collection, wash, sanitize, dry, storage.',
+      'A second door onto the staff spine lets staff in and clean ware out, with no trip through the kitchen.',
     ],
   },
 
   dispatch: {
     purpose: 'The last stop on the Orders out route. Packed orders are handed over here and leave by a double door.',
     notes: [
-      'Packing & QC feeds it directly through a connecting door, so a checked order goes straight to hand-over.',
+      'Packing connects through a door of its own, so a checked order goes straight to hand-over.',
       'The double door opens onto the Delivery Partners Pickup Zone, where a cantilevered canopy gives cover.',
-      'An emergency exit at the west end, a door through to Rider Waiting and another onto the bottom corridor.',
+      'An emergency exit at the west end, a door through to the Rider Waiting Area and one onto the bottom corridor.',
     ],
   },
 
@@ -197,16 +201,16 @@ export const ROOM_COPY: Record<RoomId, RoomCopy> = {
   toilets: {
     purpose: 'Male and female cubicles with hand basins, entered from the staff lobby rather than any working room.',
     notes: [
-      'One door off the lobby: two male and two female cubicles, with basins and hand dryers either side.',
+      'One door off the lobby: one male and one female cubicle, with basins and hand dryers either side.',
       'Close to the Staff Entrance, in the south-east, the far side of the plan from the prep rooms.',
     ],
   },
 
   exit: {
-    purpose: 'A short, clear way from the staff route to outside: green EXIT sign above, outward-opening door ahead.',
+    purpose: 'A short, clear way from the staff route to outside: a green EXIT sign above, and an emergency door designed to open outward.',
     notes: [
-      'The door opens outward, so a crowd pushes it open instead of jamming it.',
-      'Next to the Staff Entrance, the logo door, but a separate door: the escape route is never the daily one.',
+      'A green escape-route line on the floor leads to the door, and a FIRE EXIT KEEP CLEAR plate hangs on the wall.',
+      'Beside the Staff Entrance but a separate door, so the escape route is never the daily one.',
       'With the Dispatch exit it makes two emergency exits, at opposite ends of the south wall.',
     ],
   },

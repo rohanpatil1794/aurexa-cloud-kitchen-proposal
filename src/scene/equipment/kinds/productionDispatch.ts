@@ -1,9 +1,9 @@
 // Dispatch kinds: hand-over counter, bagged-order racks, order-board screen, rider bench and a floor decal.
 import type { KindBuilder } from '../registry';
 import { BRAND, SCENE } from '../../../lib/palette';
-import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
+import { STEEL, STEEL_DARK } from '../../../lib/kit';
 import { pick, rng } from '../rng';
-import { INK } from './kindKit';
+import { INK, SLATE } from './kindKit';
 import { KRAFT, TEAL_DEEP, WOOD, bag } from './productionParts';
 
 /** Stainless hand-over counter with a teal front panel facing the riders; staged bags, a POS screen and a bell on top. */
@@ -12,7 +12,7 @@ const handoverCounter: KindBuilder = (b, it) => {
   const h = it.h ?? 3.4;
   const body = d - 0.3;
   const face = -0.05 + body / 2; // front plane of the cabinet
-  b.box({ m: 'steel', c: CHARCOAL, z: -0.05, w: w - 0.3, h: 0.25, d: body - 0.2 });
+  b.box({ m: 'matte', c: SLATE, z: -0.05, w: w - 0.3, h: 0.25, d: body - 0.2 });
   b.box({ m: 'matte', c: '#3d474d', z: -0.05, y: 0.25, w: w - 0.1, h: h - 0.37, d: body });
   b.box({ m: 'matte', c: BRAND.teal, z: face + 0.03, y: 0.28, w: w - 0.1, h: h - 0.55, d: 0.06 });
   for (let k = 1; k < 5; k++) b.box({ m: 'matte', c: TEAL_DEEP, x: -w / 2 + (k * w) / 5, z: face + 0.065, y: 0.28, w: 0.03, h: h - 0.55, d: 0.01, shadow: false });

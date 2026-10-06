@@ -2,9 +2,9 @@
 // (The tray trolley is production.rollRack with props.load = 'dessert', in productionBakery.ts.)
 import type { KindBuilder } from '../registry';
 import { BRAND, SCENE } from '../../../lib/palette';
-import { CHARCOAL, STEEL, STEEL_DARK, STEEL_MID } from '../../../lib/kit';
+import { STEEL, STEEL_DARK, STEEL_MID } from '../../../lib/kit';
 import { pick, rng } from '../rng';
-import { INK } from './kindKit';
+import { INK, SLATE } from './kindKit';
 import { PANEL, PANEL_LIGHT, rodX } from './productionParts';
 
 const PASTRY = ['#d98a98', '#e6d3a0', '#5b3a2a', '#c98a3d', '#a9c279'] as const;
@@ -16,7 +16,7 @@ const freezer: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 6.4;
   const f = d / 2;
-  b.box({ m: 'matte', c: CHARCOAL, w: w - 0.1, h: 0.3, d: d - 0.1 });
+  b.box({ m: 'matte', c: SLATE, w: w - 0.1, h: 0.3, d: d - 0.1 });
   b.box({ m: 'gloss', c: PANEL, y: 0.3, w, h: h - 0.3, d });
   b.box({ m: 'gloss', c: PANEL_LIGHT, y: 0.5, z: f + 0.03, w: w - 0.2, h: h - 1.5, d: 0.06 });
   b.box({ m: 'matte', c: BRAND.teal, y: h - 0.85, z: f + 0.03, w: w - 0.2, h: 0.55, d: 0.06 });
@@ -32,7 +32,7 @@ const marbleCounter: KindBuilder = (b, it) => {
   const h = it.h ?? 3;
   const rnd = rng(it.id);
   const slab = 0.2, dc = d - 0.3, f = dc / 2, fw = (w - 0.2) / 3;
-  b.box({ m: 'steel', c: CHARCOAL, w: w - 0.4, h: 0.3, d: dc - 0.2 });
+  b.box({ m: 'matte', c: SLATE, w: w - 0.4, h: 0.3, d: dc - 0.2 });
   b.box({ m: 'gloss', c: PANEL, y: 0.3, w: w - 0.2, h: h - slab - 0.3, d: dc });
   for (let i = 0; i < 3; i++) {
     const x = -w / 2 + 0.1 + fw * (i + 0.5);

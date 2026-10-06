@@ -30,10 +30,24 @@ export const FLOW_RIBBON = {
  * A second cue besides colour, so the flows stay apart for colour-blind viewers (olive and orange, teal and black):
  *   single = a solid band with one chevron per repeat;   double = a solid band with a pair of chevrons;
  *   dashed = a broken band with a chevron on each dash;  solid = a solid band with a filled arrowhead.
- * The 3D ribbons (flowsTexture.ts) and the legend swatches draw the same pattern.
  */
 export type FlowPattern = 'single' | 'double' | 'dashed' | 'solid';
+
+/**
+ * FLOW_PATTERNS: flow id -> its pattern. A stable contract, one entry per FlowId, never undefined: the 3D ribbon texture
+ * (scene/layers/flowsTexture.ts flowTexture(color, pattern)), the legend swatches and the proposal's Zones & Flow section
+ * (sections/FlowSwatch.tsx) all read it, so the key always shows what the model draws. Use it with FLOW_BY_ID / flowInfo for the
+ * colour and name, and FLOW_PATTERN_LABEL for the words (a caption or alt text).
+ */
 export const FLOW_PATTERNS: Record<FlowId, FlowPattern> = { raw: 'single', staff: 'double', dirty: 'dashed', orders: 'solid' };
+
+/** What each pattern looks like, in words (a legend caption or alt text). */
+export const FLOW_PATTERN_LABEL: Record<FlowPattern, string> = {
+  single: 'one chevron',
+  double: 'a pair of chevrons',
+  dashed: 'a dashed band',
+  solid: 'a solid band with an arrowhead',
+};
 
 const doorAt = (id: string): Vec2 => {
   const o = OPENINGS.find((d) => d.id === id);

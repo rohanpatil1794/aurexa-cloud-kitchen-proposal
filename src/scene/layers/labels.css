@@ -2,7 +2,9 @@
    One absolutely positioned layer over the canvas. Labels.tsx moves each .lbl with a transform and fades it
    with opacity / visibility; everything else (hover, selected, compact, dot) is plain CSS driven by data attributes.
    Compact (phones, a narrow stage): short one-line names in smaller type, and a room far smaller than its pill (data-mini)
-   shows the dot face instead; the pill and the dot are two faces of the same .lbl, whichever is shown sits in the flow. */
+   shows the dot face instead; the pill and the dot are two faces of the same .lbl, whichever is shown sits in the flow.
+   Both faces are touch-action: none (like the canvas), so a finger that starts on one orbits the model instead of scrolling
+   the page: Labels.tsx forwards the press to the camera controls, a tap still selects the room. */
 
 .lbl-layer {
   --lbl-teal: var(--color-teal, #1d6866);
@@ -88,6 +90,10 @@
   text-align: center;
   cursor: pointer;
   pointer-events: auto;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   transition:
     transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -123,6 +129,9 @@
 /* The dot a small room shrinks to on compact screens: 15 px with its cream ring; the ::after is a larger touch target. */
 .lbl-mini {
   all: unset;
+  /* `all: unset` leaves display: inline, and touch-action does not apply to inline boxes: a drag starting on the dot would be
+     taken over by the browser (pointercancel after ~2 moves). A block box also sits exactly in its 15 px, with no line box. */
+  display: block;
   box-sizing: border-box;
   position: absolute;
   left: 50%;
@@ -139,6 +148,10 @@
   transform: scale(0.4);
   pointer-events: none;
   cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
   transition:
     opacity 0.2s ease,

@@ -471,5 +471,92 @@ section('8. Flow paths');
   if (failed === before) ok('flow checks passed');
 }
 
+// ---- 9. safety: extinguisher coverage (src/data/safety.ts) --------------------------------------------------
+// The brief: "ABC extinguishers at every room door and 4 in the kitchen". Checked here with its own geometry (the generator's
+// reach() is not reused): for every walk-through opening, some extinguisher stands on one of the door's two sides within
+// EXTINGUISHER_REACH ft in a straight line, with no wall, glazing or floor-standing equipment on the line to the door.
+import { EXTINGUISHER_COVERAGE, EXTINGUISHER_REACH, SAFETY_COUNTS, SAFETY_POINTS } from '../src/data/safety';
+import { DOORS, PASSENGER_LIFT, openingPoint } from '../src/data/layout';
+import { EQUIPMENT as EQUIPMENT_9 } from '../src/data/equipment';
+
+section('9. Extinguisher coverage');
+{
+  const before = failed;
+  const exts = SAFETY_POINTS.filter((p) => p.kind === 'extinguisher');
+  const rect = (it: (typeof EQUIPMENT_9)[number]) => {
+    const rot = (((it.rot ?? 0) % 180) + 180) % 180;
+    const cx = it.x + it.w / 2, cz = it.z + it.d / 2;
+    const [w, d] = rot === 90 ? [it.d, it.w] : [it.w, it.d];
+    return { x0: cx - w / 2, x1: cx + w / 2, z0: cz - d / 2, z1: cz + d / 2, y0: -1, y1: 99 };
+  };
+  const standing = EQUIPMENT_9.filter((it) => !it.props?.overhead && !it.props?.flat && !it.props?.outside).map((it) => ({ id: it.id, ...rect(it) }));
+  standing.push({ id: 'passenger-lift', x0: PASSENGER_LIFT.x, x1: PASSENGER_LIFT.x + PASSENGER_LIFT.w, z0: PASSENGER_LIFT.z, z1: PASSENGER_LIFT.z + PASSENGER_LIFT.d, y0: -1, y1: 99 });
+
+  // 9a. each door has an extinguisher that serves it
+  type Why = 'too far' | 'other side of a wall' | 'wall or glazing on the line' | 'equipment on the line';
+  const rows: string[] = [];
+  let worst = 0, covered = 0;
+  for (const o of DOORS) {
+    const [dx, dz] = openingPoint(o);
+    const perimeter = o.wall === 'h' ? o.at < EPS || o.at > FOOTPRINT.d - EPS : o.at < EPS || o.at > FOOTPRINT.w - EPS;
+    const half = (perimeter ? WALL.outer : WALL.thickness) / 2;
+    let served: { id: string; ft: number; room: string } | undefined;
+    let nearest: { id: string; ft: number; why: Why } | undefined;
+    for (const e of exts) {
+      const ft = Math.hypot(e.x - dx, e.z - dz);
+      let why: Why | undefined;
+      if (ft > EXTINGUISHER_REACH) why = 'too far';
+      else if (!o.rooms!.includes(spaceAt(e.x, e.z))) why = 'other side of a wall';
+      else {
+        const sign = (o.wall === 'h' ? e.z : e.x) >= o.at ? 1 : -1;
+        const target: [number, number] = o.wall === 'h' ? [dx, dz + sign * half] : [dx + sign * half, dz];
+        const from: [number, number] = [e.x, e.z];
+        const wall = wallBoxesIntersectSegment(from, target, e.y).length > 0 || WALL_MODEL.glass.some((g) => g.opening !== o.id && segmentHitsBox(from, target, e.y, g));
+        if (wall) why = 'wall or glazing on the line';
+        else if (standing.some((b) => segmentHitsBox(from, target, 1, b))) why = 'equipment on the line';
+      }
+      if (!why) { if (!served || ft < served.ft) served = { id: e.id, ft, room: e.room ?? '?' }; }
+      else if (!nearest || ft < nearest.ft) nearest = { id: e.id, ft, why };
+    }
+    if (served) {
+      covered++;
+      worst = Math.max(worst, served.ft);
+      rows.push(`${o.id.padEnd(16)} ${served.ft.toFixed(1).padStart(5)} ft  ${served.id} (${served.room})`);
+    } else {
+      fail(`${o.id} (${o.rooms!.join(' | ')}) has no extinguisher within ${EXTINGUISHER_REACH} ft; nearest is ${nearest ? `${nearest.id} at ${nearest.ft.toFixed(1)} ft (${nearest.why})` : 'none'}`);
+    }
+  }
+  rows.forEach((r) => console.log(`      ${r}`));
+  if (covered === DOORS.length) ok(`all ${DOORS.length} doors have an extinguisher within ${EXTINGUISHER_REACH} ft on one of their two sides (furthest ${worst.toFixed(1)} ft)`);
+
+  // 9b. four hang inside the kitchen
+  const kitchen = exts.filter((e) => spaceAt(e.x, e.z) === 'kitchen');
+  if (kitchen.length !== 4) fail(`the kitchen has ${kitchen.length} extinguishers, the brief says 4`);
+  else ok('4 extinguishers hang inside the Main Hot Kitchen');
+
+  // 9c. every one hangs on solid wall, clear of every door's 3 ft landing and of floor-standing equipment
+  let misplaced = 0;
+  for (const e of exts) {
+    const near = (b: { x0: number; x1: number; z0: number; z1: number }) => e.x > b.x0 - 0.3 && e.x < b.x1 + 0.3 && e.z > b.z0 - 0.3 && e.z < b.z1 + 0.3;
+    const hit = standing.find(near);
+    const landing = DOORS.find((o) => {
+      const [px, pz] = openingPoint(o);
+      return o.wall === 'h' ? Math.abs(e.x - px) < o.w / 2 + 0.3 && Math.abs(e.z - pz) < 3 : Math.abs(e.z - pz) < o.w / 2 + 0.3 && Math.abs(e.x - px) < 3;
+    });
+    const inside = e.x > 0 && e.x < FOOTPRINT.w && e.z > 0 && e.z < FOOTPRINT.d;
+    if (hit || landing || !inside) {
+      misplaced++;
+      fail(`${e.id} (${e.room}) at (${e.x}, ${e.z}) ${hit ? `touches ${hit.id}` : landing ? `stands in the landing of ${landing.id}` : 'is outside the footprint'}`);
+    }
+  }
+  if (!misplaced) ok(`all ${exts.length} extinguishers are clear of equipment and door landings`);
+
+  // 9d. the exported figures (legend, proposal copy) match the points
+  if (SAFETY_COUNTS.extinguisher !== exts.length) fail(`SAFETY_COUNTS.extinguisher = ${SAFETY_COUNTS.extinguisher}, points = ${exts.length}`);
+  if (EXTINGUISHER_COVERAGE.covered !== DOORS.length || EXTINGUISHER_COVERAGE.doors !== DOORS.length) fail(`EXTINGUISHER_COVERAGE says ${EXTINGUISHER_COVERAGE.covered} of ${EXTINGUISHER_COVERAGE.doors} doors, there are ${DOORS.length}`);
+  if (EXTINGUISHER_COVERAGE.kitchen !== kitchen.length) fail(`EXTINGUISHER_COVERAGE.kitchen = ${EXTINGUISHER_COVERAGE.kitchen}, found ${kitchen.length}`);
+  if (failed === before) ok(`safety figures: ${SAFETY_COUNTS.extinguisher} extinguishers, ${EXTINGUISHER_COVERAGE.covered} of ${EXTINGUISHER_COVERAGE.doors} doors covered, furthest ${EXTINGUISHER_COVERAGE.farthestFt} ft`);
+}
+
 console.log(failed ? `\nFAILED: ${failed} problem(s)` : '\nAll layout checks passed.');
 process.exit(failed ? 1 : 0);

@@ -6,7 +6,7 @@ import { CHARCOAL, STEEL, STEEL_DARK, STEEL_MID, bench, crate } from '../../../l
 /** Worktop height of every island, the pass and the hot-holding unit, ft. */
 export const TOP = 3;
 /** Cast-iron grates and wok rings. */
-export const IRON = '#262c2f';
+export const IRON = '#353f45';
 /** Carbon-steel wok. */
 export const WOK_STEEL = '#566066';
 export const COPPER = '#b8672f';

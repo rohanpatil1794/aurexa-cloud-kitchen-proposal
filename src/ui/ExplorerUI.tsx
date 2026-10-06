@@ -1,45 +1,18 @@
-// Explorer overlay, shown once the visitor has entered the space: a glass side panel on desktop, a draggable bottom
-// sheet on phones. Both carry Rooms | Layers | Views, plus the room card, the legend key and the back chip (src/ui/explorer/).
+// Explorer overlay, shown once the visitor has entered the space: a glass side panel on landscape screens, a draggable
+// bottom sheet on phones and portrait tablets (the one rule: data/cameras.ts isSheetLayout, via useSheetLayout, the same one
+// the camera frames the model with). Both carry Rooms | Layers | Views, plus the room card, the legend key, the zoom buttons
+// and the back chip (src/ui/explorer/).
+//
+// The mouse wheel is the page's: the stage is a sticky section and the proposal sits below it. Zooming the model (Ctrl / Cmd +
+// wheel, a trackpad pinch, the + / - buttons) is handled in scene/CameraRig.tsx.
 import { useEffect } from 'react';
 import { useStore } from '../store';
 import { ROOM_BY_ID, ROOM_COUNT } from '../data/layout';
-import { useIsMobile } from '../lib/hooks';
+import { useSheetLayout } from '../lib/hooks';
 import { DesktopExplorer } from './explorer/Desktop';
 import { restoreRoomFocus } from './explorer/focus';
 import { roomPosition } from './explorer/InfoCard';
 import { MobileExplorer } from './explorer/Mobile';
-
-/**
- * camera-controls reads Ctrl + wheel as a trackpad pinch and divides its deltaY by 3 instead of 30, so one notch of a real
- * mouse wheel (deltaY 100) would zoom about 5x. Pinch events are small; anything above this is clipped to it.
- */
-const MAX_CTRL_WHEEL_DELTA = 16;
-
-/**
- * Over the model the mouse wheel scrolls the page: camera-controls would swallow it, and a visitor who scrolls on to the
- * proposal would be stuck zooming. Zooming takes Ctrl / Cmd + wheel, or a trackpad pinch (browsers report it as Ctrl + wheel);
- * those reach the camera, with a mouse notch of Ctrl + wheel softened to a sensible step.
- */
-function useWheelScrollsPage() {
-  useEffect(() => {
-    const stage = document.getElementById('stage');
-    if (!stage) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!e.isTrusted || !(e.target as Element).closest('.stage-canvas')) return; // our own re-dispatch below, or the UI on top
-      if (!e.ctrlKey && !e.metaKey) {
-        e.stopPropagation(); // never reaches the camera: the page scrolls
-      } else if (e.ctrlKey && Math.abs(e.deltaY) > MAX_CTRL_WHEEL_DELTA) {
-        e.stopPropagation();
-        e.preventDefault(); // no browser page zoom either
-        const { deltaX, deltaMode, ctrlKey, clientX, clientY } = e;
-        const deltaY = Math.sign(e.deltaY) * MAX_CTRL_WHEEL_DELTA;
-        e.target?.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaX, deltaY, deltaMode, ctrlKey, clientX, clientY }));
-      }
-    };
-    stage.addEventListener('wheel', onWheel, { capture: true, passive: false });
-    return () => stage.removeEventListener('wheel', onWheel, { capture: true });
-  }, []);
-}
 
 /** Keyboard focus follows the visitor in and out: into the tab bar on entry, back to the room's row when its card goes. */
 function useExplorerFocus() {
@@ -68,12 +41,11 @@ function RoomAnnouncer() {
 }
 
 function Explorer() {
-  const mobile = useIsMobile();
-  useWheelScrollsPage();
+  const sheet = useSheetLayout();
   useExplorerFocus();
   return (
     <>
-      {mobile ? <MobileExplorer /> : <DesktopExplorer />}
+      {sheet ? <MobileExplorer /> : <DesktopExplorer />}
       <RoomAnnouncer />
     </>
   );

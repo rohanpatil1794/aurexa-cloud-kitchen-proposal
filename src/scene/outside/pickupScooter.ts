@@ -12,8 +12,8 @@ export interface ScooterStyle {
   band: string;
 }
 
-const TIRE = '#1b2225';
-const SEAT = '#2a3237';
+const TIRE = '#29323a';
+const SEAT = '#3b464c';
 const CHROME = SCENE.stainlessDark;
 
 export function scooter(b: PrimBuilder, s: ScooterStyle): void {

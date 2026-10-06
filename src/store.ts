@@ -74,6 +74,9 @@ export interface AppState {
   goPreset: (id: PresetId, instant?: boolean) => void;
   /** Select a room and fly to its overview or eye-level pose. */
   goRoom: (id: RoomId, view?: RoomView) => void;
+  /** The on-screen + / - buttons: a new `id` asks CameraRig for one zoom step (dir 1 = closer). Ctrl + wheel and pinch go straight to the rig. */
+  zoomStep: { id: number; dir: 1 | -1 };
+  stepZoom: (dir: 1 | -1) => void;
   cameraPath: CameraPath | null;
   cameraPathProgress: number;
   setCameraPath: (p: CameraPath | null) => void;
@@ -166,6 +169,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ selectedRoom: id, roomView: view });
     get().flyTo(pose.position, pose.target, { mode: eye ? 'look' : 'orbit', frame: pose.frame });
   },
+  zoomStep: { id: 0, dir: 1 },
+  stepZoom: (dir) => set((s) => ({ zoomStep: { id: s.zoomStep.id + 1, dir } })),
   cameraPath: null,
   cameraPathProgress: 0,
   setCameraPath: (p) => set({ cameraPath: p, cameraPathProgress: 0 }),

@@ -1,9 +1,9 @@
 // Bakery kinds: deck-oven stack, proofer, spiral mixer, flour-dusted work table and sheet-tray rolling racks.
 import type { KindBuilder } from '../registry';
 import { BRAND } from '../../../lib/palette';
-import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
+import { STEEL, STEEL_DARK } from '../../../lib/kit';
 import { pick, rng } from '../rng';
-import { INK } from './kindKit';
+import { INK, SLATE } from './kindKit';
 import { PANEL, TEAL_DEEP, rodX } from './productionParts';
 
 const DOUGH = '#e2c58f';
@@ -15,7 +15,7 @@ const deckOven: KindBuilder = (b, it) => {
   const { w, d } = it;
   const h = it.h ?? 6.3;
   const plinth = 0.5, cap = 0.25, top = h - cap, f = d / 2;
-  b.box({ m: 'steel', c: CHARCOAL, w: w - 0.2, h: plinth, d: d - 0.2 });
+  b.box({ m: 'matte', c: SLATE, w: w - 0.2, h: plinth, d: d - 0.2 });
   b.box({ m: 'gloss', c: PANEL, y: plinth, w, h: top - plinth, d });
   b.box({ m: 'steel', c: STEEL_DARK, y: top, w: w + 0.1, h: cap, d: d + 0.1 });
 
@@ -49,7 +49,7 @@ const proofer: KindBuilder = (b, it) => {
   const h = it.h ?? 6.2;
   const rear = 0.45; // depth left in front of the carcass for shelves behind the glass
   const f = d / 2;
-  b.box({ m: 'steel', c: CHARCOAL, w: w - 0.2, h: 0.3, d: d - 0.2 });
+  b.box({ m: 'matte', c: SLATE, w: w - 0.2, h: 0.3, d: d - 0.2 });
   b.box({ m: 'gloss', c: PANEL, y: 0.3, z: -rear / 2, w, h: h - 1.5, d: d - rear });
   b.box({ m: 'gloss', c: PANEL, y: h - 1.3, w, h: 1.1, d });
   b.box({ m: 'steel', c: STEEL_DARK, y: h - 0.2, w: w + 0.1, h: 0.2, d: d + 0.1 });
@@ -76,7 +76,7 @@ const proofer: KindBuilder = (b, it) => {
 const spiralMixer: KindBuilder = (b, it) => {
   const { w, d } = it;
   const cz = 0.35; // bowl centre, forward of the column
-  b.box({ m: 'steel', c: CHARCOAL, w: w - 0.2, h: 0.25, d: d - 0.2 });
+  b.box({ m: 'matte', c: SLATE, w: w - 0.2, h: 0.25, d: d - 0.2 });
   b.box({ m: 'matte', c: BRAND.teal, y: 0.25, z: -0.85, w: 1.5, h: 3.9, d: 0.8 });
   b.box({ m: 'matte', c: BRAND.teal, y: 3.65, z: -0.2, w: 1.5, h: 0.7, d: 1.9 });
   b.cyl({ m: 'matte', c: TEAL_DEEP, r: 0.5, y: 0.25, h: 1.15, z: cz });

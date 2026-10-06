@@ -74,7 +74,7 @@ const liftShaft: KindBuilder = (b, it) => {
   b.box({ m: 'matte', c: BRAND.teal, y: h, w: w + 0.04, h: 0.15, d: d + 0.04 });
   for (const y of [4.9, 9]) b.box({ m: 'matte', c: INK, y, w: w + 0.02, h: 0.04, d: d + 0.02, shadow: false });
 
-  b.box({ m: 'matte', c: '#2f373c', z: f + 0.02, w: dw + 0.4, h: dh + 0.2, d: 0.05 });
+  b.box({ m: 'matte', c: '#566269', z: f + 0.02, w: dw + 0.4, h: dh + 0.2, d: 0.05 });
   for (const s of [-1, 1]) {
     b.box({ m: 'gloss', c: PANEL_LIGHT, x: s * (dw / 4 + 0.01), y: 0.04, z: f + 0.06, w: dw / 2 - 0.03, h: dh - 0.04, d: 0.06 });
     b.box({ m: 'matte', c: INK, x: s * 0.07, y: 0.2, z: f + 0.095, w: 0.07, h: dh - 0.3, d: 0.03, shadow: false });

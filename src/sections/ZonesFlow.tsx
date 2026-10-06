@@ -1,31 +1,38 @@
-import { FLOWS } from '../data/flows';
+import { FLOWS, FLOW_PATTERNS } from '../data/flows';
 import { ROOMS, ZONES } from '../data/layout';
 import type { ZoneId } from '../data/types';
 import { FLOW_LAYERS } from '../store';
+import { FlowSwatch } from './FlowSwatch';
 import { CubeIcon } from './icons';
 import { Reveal, SectionHeading, SeeIn3DButton } from './primitives';
 import { seeIn3D } from './seeIn3D';
 
-const ZONE_ROWS: { id: ZoneId; line: string }[] = [
-  { id: 'veg', line: 'Every vegetarian dish begins here, on a green floor with green boards and bins.' },
-  { id: 'jain', line: 'Its own bench, boards and bins for Jain ingredient rules, all in yellow.' },
-  { id: 'vegan', line: 'Plant-based food prepared with no animal product in the room, in purple.' },
-  { id: 'nonveg', line: 'Meat, poultry and fish are cut and cleaned here, and only here, in red.' },
+// glyph: a letter code beside the colour, so a zone is never told by colour alone.
+const ZONE_ROWS: { id: ZoneId; glyph: string; line: string }[] = [
+  { id: 'veg', glyph: 'V', line: 'Every vegetarian dish begins here, on a green floor with green boards and bins.' },
+  { id: 'jain', glyph: 'J', line: 'Its own benches, boards and bins for Jain ingredient rules, all in yellow.' },
+  { id: 'vegan', glyph: 'VG', line: 'Plant-based food prepared with no animal product in the room, in purple.' },
+  { id: 'nonveg', glyph: 'NV', line: 'Meat, poultry and fish are cut and cleaned here, and only here, in red.' },
 ];
+
+/** Page ink (--color-ink in index.css): with white, the two label colours a zone swatch can carry. */
+const INK = '#0c1718';
+const luminance = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+/** White or ink, whichever reads better on the zone colour. */
+const labelOn = (bg: string) => (contrast(luminance(bg), 1) >= contrast(luminance(bg), luminance(INK)) ? '#ffffff' : INK);
 
 const zoneRoom = (id: ZoneId) => ROOMS.find((r) => r.zone === id);
 
 const ZONE_TARGET = { on: ['zones'] } as const;
 const FLOWS_TARGET = { on: FLOW_LAYERS } as const;
-
-/** A short thick arrow in the flow colour. */
-function FlowSwatch({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 44 44" aria-hidden="true" className="size-9 shrink-0 sm:size-11">
-      <path d="M6 22h28m-8-8 8 8-8 8" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export function ZonesFlow() {
   return (
@@ -44,18 +51,20 @@ export function ZonesFlow() {
             <div className="prop-panel flex w-full flex-col">
               <h3 className="brand-heading text-lg tracking-[0.16em] text-teal">Diet zones</h3>
               <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink/75">
-                Four prep rooms, one colour each. The colour carries from the floor to the boards and bins.
+                Four prep rooms, one colour and one letter each. The colour carries from the floor to the boards and bins.
               </p>
               <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
-                {ZONE_ROWS.map(({ id, line }) => {
+                {ZONE_ROWS.map(({ id, glyph, line }) => {
                   const room = zoneRoom(id);
                   return (
                     <li key={id} className="flex items-center gap-4 py-5">
                       <span
                         aria-hidden="true"
-                        className="size-11 shrink-0 rounded-xl ring-1 ring-ink/10"
-                        style={{ background: ZONES[id].color }}
-                      />
+                        className="grid size-11 shrink-0 place-items-center rounded-xl text-[0.8125rem] font-bold tracking-[0.04em] ring-1 ring-ink/10"
+                        style={{ background: ZONES[id].color, color: labelOn(ZONES[id].color) }}
+                      >
+                        {glyph}
+                      </span>
                       <div>
                         <p className="font-semibold text-ink">{ZONES[id].name}</p>
                         <p className="mt-0.5 text-[0.9375rem] leading-snug text-ink/75">{line}</p>
@@ -83,7 +92,7 @@ export function ZonesFlow() {
             <div className="prop-panel flex w-full flex-col">
               <h3 className="brand-heading text-lg tracking-[0.16em] text-teal">Workflow flows</h3>
               <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink/75">
-                Four routes, each in its own colour. Choose one to see it on its own in the model.
+                Four routes, each with its own colour and pattern. Choose one to see it on its own in the model.
               </p>
               <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
                 {FLOWS.map((f) => (
@@ -93,7 +102,7 @@ export function ZonesFlow() {
                       className="prop-row"
                       onClick={() => seeIn3D({ on: [f.id], off: FLOW_LAYERS.filter((l) => l !== f.id) })}
                     >
-                      <FlowSwatch color={f.color} />
+                      <FlowSwatch color={f.color} pattern={FLOW_PATTERNS[f.id]} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold text-ink">{f.name}</span>
                         <span className="mt-0.5 block text-[0.9375rem] leading-snug text-ink/75">{f.summary}</span>

@@ -191,7 +191,7 @@ const chiller: KindBuilder = (b, it) => {
   for (const y of [1.55, 3.35]) b.box({ m: 'steel', c: STEEL_DARK, x: hx, y, z: fz + 0.12, w: 0.07, h: 0.07, d: 0.14, shadow: false });
   // name plate, then the control panel with display and status lights
   b.sign({ text: 'BLAST CHILLER', x: 0, y: 4.3, z: fz + 0.07, w: w - 0.5, h: 0.3, bg: BRAND.teal, fg: BRAND.cream, tracking: 0.1 });
-  b.box({ m: 'matte', c: '#2b3236', y: 4.9, z: fz + 0.03, w: w - 0.2, h: 0.95, d: 0.08 });
+  b.box({ m: 'matte', c: '#3d484e', y: 4.9, z: fz + 0.03, w: w - 0.2, h: 0.95, d: 0.08 });
   b.box({ m: 'emissive', c: '#7fe3ef', x: -0.3, y: 5.3, z: fz + 0.075, w: 0.75, h: 0.28, d: 0.02 });
   b.box({ m: 'emissive', c: '#62f0a8', x: 0.55, y: 5.4, z: fz + 0.075, w: 0.1, h: 0.1, d: 0.02 });
   b.box({ m: 'emissive', c: '#ff9a4d', x: 0.8, y: 5.4, z: fz + 0.075, w: 0.1, h: 0.1, d: 0.02 });

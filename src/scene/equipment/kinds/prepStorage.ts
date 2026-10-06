@@ -4,7 +4,7 @@ import { BRAND, ZONE_COLORS } from '../../../lib/palette';
 import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
 import type { KindBuilder } from '../registry';
 import { rng } from '../rng';
-import { tint } from './kindKit';
+import { SLATE, tint } from './kindKit';
 import { SATIN_STEEL, tub } from './prepKit';
 
 const LABEL_INK = '#12302f';
@@ -64,7 +64,7 @@ const walkIn: KindBuilder = (b, it) => {
 
   // refrigeration condenser on the roof
   b.box({ m: 'gloss', c: SATIN_STEEL, x: 0.2, y: h + 0.1, w: 2.2, h: 0.6, d: Math.min(1.5, d - 0.4) });
-  b.cyl({ m: 'matte', c: '#2b3236', x: 0.2, y: h + 0.7, r: 0.5, h: 0.04, shadow: false });
+  b.cyl({ m: 'matte', c: SLATE, x: 0.2, y: h + 0.7, r: 0.5, h: 0.04, shadow: false });
 };
 
 /** Rolling rack with one crate per dietary zone (the cold chain feeding the four prep rooms). */

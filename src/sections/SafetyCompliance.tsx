@@ -1,50 +1,108 @@
 import type { ReactNode } from 'react';
-import { OPENINGS, ROOM_BY_ID } from '../data/layout';
-import type { RoomId } from '../data/types';
+import { CIRCULATION, DOORS, OPENINGS, ROOMS, ROOM_BY_ID, ROOM_COUNT, openingPoint } from '../data/layout';
+import { SAFETY_COUNTS, SAFETY_POINTS } from '../data/safety';
+import type { RoomId, SafetyKind } from '../data/types';
 import {
   EmergencyLightIcon, ExitDoorIcon, ExitSignIcon, ExtinguisherIcon, GasLeakIcon, GasValveIcon,
   HeatIcon, SmokeIcon, StairsIcon,
 } from './icons';
 import { Reveal, SectionHeading, SeeIn3DButton } from './primitives';
 
+// Every number on this page comes from the generated safety points (data/safety.ts), so the copy can never drift from
+// what the 3D layer shows. The wording of each claim was checked against the safety rules in that file.
+const COUNT = SAFETY_COUNTS;
+const WORDS = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+/** Small counts in words ("four"), anything larger as a figure. */
+const words = (n: number) => WORDS[n] ?? String(n);
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const join = (items: string[]) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+
+const pointsOf = (kind: SafetyKind) => SAFETY_POINTS.filter((p) => p.kind === kind);
+const inRoom = (kind: SafetyKind, room: RoomId) => pointsOf(kind).filter((p) => p.room === room).length;
+const CORRIDOR_IDS = new Set<string>(CIRCULATION.map((c) => c.id));
+
+/** "four in the Main Hot Kitchen and one in the Bakery & Bread Production": where a kind is placed, room by room. */
+const placedIn = (kind: SafetyKind) =>
+  join(ROOMS.filter((r) => inRoom(kind, r.id) > 0).map((r) => `${words(inRoom(kind, r.id))} in the ${r.name}`));
+
 const EMERGENCY_EXITS = OPENINGS.filter((o) => o.kind === 'emergency');
 /** Each emergency exit is a door from a room straight outside; the room is the first of its two spaces. */
 const EXIT_ROOMS = EMERGENCY_EXITS.map((o) => ROOM_BY_ID[o.rooms![0] as RoomId].name).join(' and ');
 
+// ---- extinguishers: one near every door, and one per kitchen door inside the kitchen ----
+const KITCHEN_EXTINGUISHERS = inRoom('extinguisher', 'kitchen');
+/** What "a few strides" means, ft (about four strides). The claim is only made while the model keeps to it. */
+const STRIDES_FT = 10;
+/** The longest walk from any door of the plan to its nearest extinguisher, ft. */
+const FURTHEST_DOOR_FT = Math.max(
+  ...DOORS.map((o) => {
+    const [x, z] = openingPoint(o);
+    return Math.min(...pointsOf('extinguisher').map((p) => Math.hypot(p.x - x, p.z - z)));
+  }),
+);
+const EXTINGUISHER_REACH =
+  FURTHEST_DOOR_FT <= STRIDES_FT ? 'always one within a few strides of every room door' : 'spread through the rooms and corridors';
+
+// ---- smoke: a detector in every room (two or more where a room has several) ----
+const SMOKE_ROOMS = ROOMS.filter((r) => inRoom('smoke', r.id) > 0).length;
+const SMOKE_EXTRA = ROOMS.filter((r) => inRoom('smoke', r.id) > 1);
+const SMOKE_COVERAGE = SMOKE_ROOMS === ROOM_COUNT ? 'one in every room' : `in ${SMOKE_ROOMS} of the ${ROOM_COUNT} rooms`;
+
+// ---- LPG: low on the walls beside the gas ring main, which runs through the corridors round the kitchen ----
+const LPG_CORRIDOR = pointsOf('lpg').filter((p) => p.room && CORRIDOR_IDS.has(p.room)).length;
+const LPG_KITCHEN = inRoom('lpg', 'kitchen');
+
+// ---- emergency lights: above the exits and the Staff Entrance, plus corridor junctions ----
+const EM_JUNCTIONS = pointsOf('emlight').filter((p) => /junction/i.test(p.label ?? '')).length;
+const EM_DOORS = COUNT.emlight - EM_JUNCTIONS;
+
 const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
   {
     title: 'ABC fire extinguishers',
-    body: 'One at every room door, plus four in the Main Hot Kitchen, where the heat and the fuel are.',
+    body:
+      `${COUNT.extinguisher} in all: ${EXTINGUISHER_REACH}, and ${words(KITCHEN_EXTINGUISHERS)} ` +
+      `inside the ${ROOM_BY_ID.kitchen.name}, where the heat and the fuel are.`,
     icon: <ExtinguisherIcon className="size-8" />,
   },
   {
     title: 'Smoke detectors',
-    body: 'In every room, so a fire is caught wherever it starts.',
+    body:
+      `${COUNT.smoke} in all: ${SMOKE_COVERAGE}` +
+      (SMOKE_EXTRA.length
+        ? `, with ${join(SMOKE_EXTRA.map((r) => `${words(inRoom('smoke', r.id))} in the ${r.name}`))}`
+        : '') +
+      ', so a fire is picked up early in whichever room it starts.',
     icon: <SmokeIcon className="size-8" />,
   },
   {
     title: 'Heat detectors',
-    body: 'In the kitchen and the bakery, where steam and oven heat suit heat sensing better than smoke.',
+    body: `${COUNT.heat} in all: ${placedIn('heat')}, where steam and oven heat suit heat sensing better than smoke.`,
     icon: <HeatIcon className="size-8" />,
   },
   {
     title: 'LPG leak detectors',
-    body: 'Placed near the gas ring main that feeds the cooking line.',
+    body:
+      `${COUNT.lpg} in all, mounted low because LPG sinks: ${words(LPG_CORRIDOR)} in the corridors that carry the gas ring main` +
+      (LPG_KITCHEN ? ` and ${words(LPG_KITCHEN)} inside the ${ROOM_BY_ID.kitchen.name}.` : '.'),
     icon: <GasLeakIcon className="size-8" />,
   },
   {
     title: 'Emergency gas shut-off',
-    body: 'A single valve at the kitchen’s west door, so the gas can be cut on the way out.',
+    body:
+      `${COUNT.gasvalve === 1 ? 'A single valve' : `${cap(words(COUNT.gasvalve))} valves`} on the gas ring main, just outside the ` +
+      `${ROOM_BY_ID.kitchen.name}’s west door, so the gas can be cut on the way out.`,
     icon: <GasValveIcon className="size-8" />,
   },
   {
     title: 'Emergency lighting',
-    body: 'Above every exit and at the corridor corners, so the way out stays lit.',
+    body:
+      `${COUNT.emlight} in all: ${words(EM_DOORS)} above the ${words(EMERGENCY_EXITS.length)} emergency exits, the fire-stair door and ` +
+      `the Staff Entrance, and ${words(EM_JUNCTIONS)} where corridors meet, so the way out stays lit.`,
     icon: <EmergencyLightIcon className="size-8" />,
   },
   {
     title: 'Green EXIT signs',
-    body: `At both emergency exits: ${EXIT_ROOMS}.`,
+    body: `${COUNT.exit} in all: above both emergency exits (${EXIT_ROOMS}) and the fire-stair door.`,
     icon: <ExitSignIcon className="size-9" />,
   },
   {
@@ -53,7 +111,7 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
     icon: <StairsIcon className="size-8" />,
   },
   {
-    title: 'Two emergency exits',
+    title: `${cap(words(EMERGENCY_EXITS.length))} emergency exits`,
     body: `${EXIT_ROOMS} each open straight outside, at opposite ends of the south wall.`,
     icon: <ExitDoorIcon className="size-8" />,
   },
@@ -67,7 +125,7 @@ export function SafetyCompliance() {
           <SectionHeading
             id="safety-title"
             index="03"
-            label="Safety and compliance"
+            label="Safety planning"
             title="Safety planned in, not added on"
             tone="sand"
             lead="Every safety feature in the layout is placed on the model, so you can see exactly where each one sits."
@@ -93,8 +151,9 @@ export function SafetyCompliance() {
 
         <Reveal>
           <p className="mt-10 max-w-3xl text-sm leading-relaxed text-ink/80">
-            These are design intentions: the layout is planned with these features in mind. Quantities, ratings and positions
-            are confirmed with the local fire authority and licensed installers during detailed design.
+            These are design intentions: the layout is designed for these features, and every count above comes straight from
+            the model. Quantities, ratings and positions are confirmed with the local fire authority and licensed installers
+            during detailed design.
           </p>
         </Reveal>
       </div>

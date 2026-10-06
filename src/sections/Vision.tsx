@@ -4,7 +4,8 @@ import {
   CUISINE_STATION_COUNT, DIETARY_ZONE_COUNT, ROOM_BY_ID, ROOM_COUNT, TOTAL_AREA, ZONES,
 } from '../data/layout';
 import type { ZoneId } from '../data/types';
-import { BRAND, FLOW_COLORS } from '../lib/palette';
+import { FLOWS } from '../data/flows';
+import { BRAND } from '../lib/palette';
 import { CubeMotif } from '../ui/CubeMotif';
 import { OneWayIcon, PeopleIcon, ZoningIcon } from './icons';
 import { CountUp, Reveal, SectionHeading } from './primitives';
@@ -20,18 +21,14 @@ const PILLARS: { title: string; icon: ReactNode; body: string; chips: Chip[] }[]
   {
     title: 'Hygiene-first diet zoning',
     icon: <ZoningIcon className="size-8" />,
-    body: 'Vegetarian, Jain, Vegan and Non-Veg food each get a dedicated prep room, with its own door and a colour-coded floor, boards and bins. Cross-contact is designed out of the plan, not left to memory.',
+    body: 'Vegetarian, Jain, Vegan and Non-Veg food each get a dedicated prep room, with its own door and a colour-coded floor, boards and bins. The plan is designed to keep cross-contact out, not to leave it to memory.',
     chips: DIET_ZONES.map((id) => ({ label: ZONES[id].name, color: ZONES[id].color })),
   },
   {
     title: 'One-way workflows',
     icon: <OneWayIcon className="size-8" />,
-    body: 'Clean in, dirty out, orders out. Ingredients, staff, used utensils and waste, and finished orders each follow their own route, planned so that the routes never cross.',
-    chips: [
-      { label: 'Clean in', color: FLOW_COLORS.raw },
-      { label: 'Dirty out', color: FLOW_COLORS.dirty },
-      { label: 'Orders out', color: FLOW_COLORS.orders },
-    ],
+    body: 'Clean in, dirty out, orders out. Ingredients, staff, used utensils and waste, and finished orders each follow their own route, and routes that share a corridor keep to separate lanes.',
+    chips: FLOWS.map((f) => ({ label: f.name, color: f.color })),
   },
   {
     title: 'Spaces for people',

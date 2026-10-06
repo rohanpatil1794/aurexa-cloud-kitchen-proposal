@@ -147,16 +147,16 @@ const pasta: KindBuilder = (b, it) => {
 const induction: KindBuilder = (b, it) => {
   const { w, d } = it;
   unit(b, { w, d, doors: 1, riser: 0.9 });
-  b.box({ m: 'gloss', c: '#0d1114', y: COUNTER, z: -0.1, w: w - 0.14, h: 0.04, d: d - 0.45, shadow: false });
+  b.box({ m: 'gloss', c: '#232c31', y: COUNTER, z: -0.1, w: w - 0.14, h: 0.04, d: d - 0.45, shadow: false });
   const zr = -0.6;
   const zf = 0.65;
   const y = COUNTER + 0.04;
   for (const z of [zr, zf]) {
     b.cyl({ m: 'matte', c: '#46565e', x: 0, y, z, r: 0.6, h: 0.015, shadow: false });
-    b.cyl({ m: 'gloss', c: '#0d1114', x: 0, y, z, r: 0.55, h: 0.025, shadow: false });
+    b.cyl({ m: 'gloss', c: '#232c31', x: 0, y, z, r: 0.55, h: 0.025, shadow: false });
   }
   b.cyl({ m: 'emissive', c: '#ff4a22', x: 0, y, z: zf, r: 0.5, h: 0.035 });
-  b.cyl({ m: 'gloss', c: '#0d1114', x: 0, y, z: zf, r: 0.42, h: 0.045, shadow: false });
+  b.cyl({ m: 'gloss', c: '#232c31', x: 0, y, z: zf, r: 0.42, h: 0.045, shadow: false });
   pot(b, 0, y + 0.025, zr, 0.45, 0.65);
   for (let i = 0; i < 4; i++) b.box({ m: 'emissive', c: '#7fd7ff', x: (i - 1.5) * 0.3, y, z: d / 2 - 0.12, w: 0.1, h: 0.015, d: 0.06 });
 };
@@ -181,13 +181,13 @@ const wok: KindBuilder = (b, it) => {
   b.cyl({ m: 'matte', c: KL.dark, r: r - 0.2, h: 0.3 });
   b.cyl({ m: SHEET, c: KL.body, r: r - 0.3, y: 0.3, h: 2.5 });
   b.cyl({ m: 'steel', c: KL.top, r, y: 2.8, h: plate - 2.8 });
-  b.cyl({ m: 'steel', c: KL.dark, r: r - 0.1, y: plate, h: 0.02, shadow: false });
+  b.cyl({ m: 'matte', c: KL.dark, r: r - 0.1, y: plate, h: 0.02, shadow: false });
   b.cyl({ m: 'emissive', c: KL.flame, r: 1.12, y: plate + 0.02, h: 0.02 });
-  b.cyl({ m: 'steel', c: KL.dark, r: 1.04, y: plate + 0.02, h: 0.03, shadow: false });
+  b.cyl({ m: 'matte', c: KL.dark, r: 1.04, y: plate + 0.02, h: 0.03, shadow: false });
   // wok bowl: inverted cone under a steel rim, dark interior
-  b.cone({ m: 'steel', c: KL.dark, r: 0.95, y: plate + 0.05, h: 0.3, rx: 180 });
+  b.cone({ m: 'matte', c: KL.dark, r: 0.95, y: plate + 0.05, h: 0.3, rx: 180 });
   b.cyl({ m: 'steel', c: KL.handle, r: 0.98, y: plate + 0.32, h: 0.06 });
-  b.cyl({ m: 'matte', c: '#15191b', r: 0.9, y: plate + 0.32, h: 0.08, shadow: false });
+  b.cyl({ m: 'matte', c: '#2c363c', r: 0.9, y: plate + 0.32, h: 0.08, shadow: false });
   const food: [number, number, number, string][] = [
     [-0.35, -0.2, 0.2, '#c93a32'], [0.2, -0.4, 0.18, '#4f9a45'], [0.45, 0.1, 0.2, '#e8b83a'], [-0.1, 0.25, 0.22, '#f0e2bd'],
     [-0.5, 0.2, 0.17, '#d9742a'], [0.05, -0.05, 0.19, '#4f9a45'], [0.3, 0.45, 0.16, '#c93a32'], [-0.3, -0.55, 0.15, '#e8b83a'],
@@ -214,7 +214,7 @@ const cladding: KindBuilder = (b, it) => {
 
 /** Anti-fatigue rubber mat in front of a line section (floor decal). */
 const mat: KindBuilder = (b, it) => {
-  b.box({ m: 'matte', c: '#343c41', y: 0.02, w: it.w, h: 0.03, d: it.d, shadow: false });
+  b.box({ m: 'matte', c: '#46525a', y: 0.02, w: it.w, h: 0.03, d: it.d, shadow: false });
 };
 
 export const APPLIANCE_KINDS: Record<string, KindBuilder> = {

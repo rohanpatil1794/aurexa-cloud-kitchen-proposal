@@ -14,7 +14,7 @@ const BIN_ORDER = ['yellow', 'green', 'teal', 'blue', 'grey', 'red'] as const;
 const wasteBins: KindBuilder = (b, it) => {
   const pitch = it.w / BIN_ORDER.length;
   const wall = -it.d / 2;
-  b.box({ m: 'matte', c: INK, y: 2.95, z: wall + 0.03, w: it.w - 0.1, h: 0.5, d: 0.05, shadow: false });
+  b.box({ m: 'matte', c: '#505d65', y: 2.95, z: wall + 0.03, w: it.w - 0.1, h: 0.5, d: 0.05, shadow: false });
   BIN_ORDER.forEach((name, i) => {
     const x = -it.w / 2 + pitch * (i + 0.5);
     const c = BIN_COLORS[name];
@@ -106,7 +106,7 @@ const sortTable: KindBuilder = (b, it) => {
   [BIN_COLORS.green, BIN_COLORS.blue, BIN_COLORS.grey].forEach((c, i) => {
     b.box({ m: 'gloss', c, x: -1.2 + i * 1.05, y: 3.0, z: 0.1, w: 0.9, h: 0.14, d: 1.1, shadow: false });
   });
-  b.box({ m: 'matte', c: '#1d2326', x: 1.5, y: 3.0, z: 0.1, w: 0.7, h: 0.02, d: 0.7, shadow: false });
+  b.box({ m: 'matte', c: '#3b464c', x: 1.5, y: 3.0, z: 0.1, w: 0.7, h: 0.02, d: 0.7, shadow: false });
   b.box({ m: 'matte', c: '#77838d', x: -1.0, y: 0.67, w: 0.9, h: 0.45, d: 0.9 });
   b.box({ m: 'matte', c: '#77838d', x: 0.7, y: 0.67, w: 0.9, h: 0.45, d: 0.9 });
 };
@@ -114,7 +114,7 @@ const sortTable: KindBuilder = (b, it) => {
 /** Slotted floor drain / channel (decal). */
 const drain: KindBuilder = (b, it) => {
   floorPlate(b, { w: it.w, d: it.d, c: '#8a96a0', y: 0.03, h: 0.02 });
-  floorPlate(b, { w: it.w - 0.12, d: it.d - 0.12, c: '#2e373c', y: 0.045, h: 0.01 });
+  floorPlate(b, { w: it.w - 0.12, d: it.d - 0.12, c: '#46525a', y: 0.045, h: 0.01 });
   const alongX = it.w >= it.d, len = alongX ? it.w : it.d;
   const n = Math.max(2, Math.round(len / 0.3));
   for (let i = 0; i < n; i++) {

@@ -9,7 +9,7 @@ export const KL = {
   front: '#bdc7cf',
   body: '#aeb9c2',
   handle: '#e6ecf0',
-  dark: '#2a3237',
+  dark: '#3b464c',
   iron: '#1b2125',
   knob: '#dde3e7',
   brass: SCENE.brass,

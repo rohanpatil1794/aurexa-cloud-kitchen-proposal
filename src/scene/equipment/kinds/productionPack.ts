@@ -2,9 +2,9 @@
 import type { PrimBuilder } from '../../../lib/prims';
 import type { KindBuilder } from '../registry';
 import { BRAND } from '../../../lib/palette';
-import { CHARCOAL, STEEL, STEEL_DARK } from '../../../lib/kit';
+import { STEEL, STEEL_DARK } from '../../../lib/kit';
 import { pick, rng } from '../rng';
-import { INK } from './kindKit';
+import { INK, SLATE } from './kindKit';
 import { KRAFT, PANEL_LIGHT, bag, rodX } from './productionParts';
 
 const WHITE_BOX = '#d9d2c0';
@@ -37,7 +37,7 @@ const packModule: KindBuilder = (b, it) => {
 
   switch (it.props?.tool) {
     case 'sealer':
-      b.box({ m: 'matte', c: CHARCOAL, x: -0.2, z: 0.2, y: h, w: 0.9, h: 0.2, d: 0.5 });
+      b.box({ m: 'matte', c: SLATE, x: -0.2, z: 0.2, y: h, w: 0.9, h: 0.2, d: 0.5 });
       b.box({ m: 'matte', c: BRAND.orange, x: -0.2, z: 0.2, y: h + 0.22, w: 0.9, h: 0.1, d: 0.22, rx: -6 });
       b.box({ m: 'emissive', c: '#6ee0a0', x: 0.15, z: 0.47, y: h + 0.14, w: 0.1, h: 0.04, d: 0.01 });
       bag(b, { x: 0.6, y: h, z: -0.45, c: KRAFT[1], tape: true, ry: 10 });
@@ -45,12 +45,12 @@ const packModule: KindBuilder = (b, it) => {
       break;
     case 'scale':
       b.box({ m: 'steel', c: '#7d8a95', x: -0.3, z: 0.25, y: h, w: 0.9, h: 0.1, d: 0.75 });
-      b.box({ m: 'matte', c: INK, x: 0.5, z: -0.3, y: h, w: 0.34, h: 0.5, d: 0.14 });
+      b.box({ m: 'matte', c: SLATE, x: 0.5, z: -0.3, y: h, w: 0.34, h: 0.5, d: 0.14 });
       b.box({ m: 'emissive', c: '#8cf0c8', x: 0.5, z: -0.22, y: h + 0.3, w: 0.24, h: 0.12, d: 0.01 });
       bag(b, { x: -0.3, y: h + 0.1, z: 0.25, w: 0.5, h: 0.6, d: 0.4, c: KRAFT[2], tape: true });
       break;
     case 'printer':
-      b.box({ m: 'matte', c: INK, x: -0.4, z: 0.1, y: h, w: 0.6, h: 0.3, d: 0.5 });
+      b.box({ m: 'matte', c: SLATE, x: -0.4, z: 0.1, y: h, w: 0.6, h: 0.3, d: 0.5 });
       b.cyl({ m: 'matte', c: '#f1ede4', r: 0.2, h: 0.12, rx: 90, x: -0.4, y: h + 0.4, z: -0.15, shadow: false });
       b.box({ m: 'matte', c: '#f1ede4', x: -0.4, z: 0.5, y: h, w: 0.3, h: 0.01, d: 0.35, shadow: false });
       b.box({ m: 'matte', c: WHITE_BOX, x: 0.6, z: -0.3, y: h, w: 0.8, h: 0.18, d: 0.65 });

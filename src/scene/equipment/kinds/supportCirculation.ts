@@ -10,7 +10,7 @@ const RISE = 0.5;
 const RUN = 0.9;
 const FLIGHT_W = 2.7;
 const RAIL_H = 3;
-const STAIR_STEEL = '#2d3a40';
+const STAIR_STEEL = '#566771';
 const CONCRETE = '#bfb9ab';
 const ANGLE = (Math.atan2(RISE, RUN) * 180) / Math.PI;
 

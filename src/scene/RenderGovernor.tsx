@@ -6,11 +6,14 @@
 //    draws nothing, so it costs no CPU / GPU / battery.
 //  - it also times the frames of those continuous runs and steps the pixel ratio down a tier when they are slow
 //    (and probes back up later). drei's PerformanceMonitor cannot do this under 'demand': it reads every idle gap as a slow frame.
-//  - <BootGate/> compiles every shader program asynchronously before the first frame (KHR_parallel_shader_compile) and
-//    then reads each program's uniform / attribute table in small slices, so the main thread - and the loading splash -
-//    never block on the 2-3 s of synchronous program links, nor on the ~1 s of first-use introspection three does lazily.
+//  - <BootGate/> compiles every shader program asynchronously before the first frame (KHR_parallel_shader_compile), reads
+//    each program's uniform / attribute table as it links and uploads the textures, all in small slices, so the main thread -
+//    and the loading splash - never block on the 2-3 s of synchronous program links, nor on the ~1 s of first-use
+//    introspection and the texture uploads three does lazily inside the first draw. The same goes for the groups Scene
+//    mounts after the hero is up.
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import type * as THREE from 'three';
 import type { PerspectiveCamera } from 'three';
 import { FLOW_LAYERS, useStore, type AppState } from '../store';
 import { onContextRestored } from './lightState';
@@ -28,7 +31,7 @@ const PULSE_MS = 33;
 const POSE_EPS = 5e-4;
 /** Gives up waiting for the shader compile (a driver that never reports completion) after this long. */
 const COMPILE_TIMEOUT_MS = 12000;
-/** The warm-up of the program tables yields to the browser after this long a slice. */
+/** The warm-up (program tables, texture uploads) yields to the browser after this long a slice. */
 const WARM_SLICE_MS = 10;
 const yieldToMain = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -189,18 +192,98 @@ export function RenderGovernor({ tier, mobile, pinned, onTier }: Props) {
   return null;
 }
 
+/** Every texture a mounted material uses (maps, shader uniforms), once. */
+function sceneTextures(scene: THREE.Scene): Set<THREE.Texture> {
+  const materials = new Set<THREE.Material>();
+  scene.traverse((o) => {
+    const m = (o as THREE.Mesh).material;
+    if (Array.isArray(m)) m.forEach((x) => materials.add(x));
+    else if (m) materials.add(m);
+  });
+  const out = new Set<THREE.Texture>();
+  for (const m of materials) {
+    for (const key in m) {
+      const v = (m as unknown as Record<string, unknown>)[key];
+      if ((v as THREE.Texture | null)?.isTexture) out.add(v as THREE.Texture);
+    }
+    const uniforms = (m as THREE.ShaderMaterial).uniforms;
+    if (uniforms) for (const u of Object.values(uniforms)) if ((u.value as THREE.Texture | null)?.isTexture) out.add(u.value as THREE.Texture);
+  }
+  return out;
+}
+
+type LinkedProgram = THREE.WebGLProgram & { isReady?: () => boolean };
+
+/** Hands the thread back to the browser whenever a slice has run for WARM_SLICE_MS. */
+function slicer(): () => Promise<void> {
+  let start = performance.now();
+  return async () => {
+    if (performance.now() - start > WARM_SLICE_MS) {
+      await yieldToMain();
+      start = performance.now();
+    }
+  };
+}
+
+/** Puts the textures not yet on the GPU there (the 9 MB sign atlas, the floors ...): otherwise they land inside the first draw. */
+async function warmTextures(gl: THREE.WebGLRenderer, scene: THREE.Scene, seen: WeakSet<object>, alive: () => boolean, slice: () => Promise<void>): Promise<void> {
+  for (const texture of sceneTextures(scene)) {
+    if (!alive()) return;
+    if (seen.has(texture) || !texture.image || texture.isRenderTargetTexture || (texture as THREE.CubeTexture).isCubeTexture) continue;
+    seen.add(texture);
+    gl.initTexture(texture);
+    await slice();
+  }
+}
+
+/**
+ * Reads the uniform / attribute tables (three would do it inside the first draw, ~30 ms a program) of the programs that
+ * are linked and not yet read. Returns how many are still linking.
+ */
+async function warmPrograms(gl: THREE.WebGLRenderer, seen: WeakSet<object>, alive: () => boolean, slice: () => Promise<void>): Promise<number> {
+  let linking = 0;
+  for (const program of (gl.info.programs ?? []) as LinkedProgram[]) {
+    if (!alive()) return 0;
+    if (seen.has(program)) continue;
+    if (program.isReady && !program.isReady()) {
+      linking++;
+      continue;
+    }
+    seen.add(program);
+    program.getUniforms();
+    program.getAttributes();
+    await slice();
+  }
+  return linking;
+}
+
+/**
+ * Everything the first draw would otherwise do inline, in short slices: wait for the programs to link (they link in the GPU
+ * process, in parallel with us) and read their tables as they do, and upload the textures meanwhile. The last programs
+ * are usually still linking when the last group is built: that wait is spent on the uploads instead of idling.
+ */
+async function warmUp(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, seen: WeakSet<object>, alive: () => boolean): Promise<void> {
+  const slice = slicer();
+  void gl.compileAsync(scene, camera).catch(() => {}); // also builds the programs of a group nobody has compiled yet
+  await warmTextures(gl, scene, seen, alive, slice);
+  while (alive() && (await warmPrograms(gl, seen, alive, slice)) > 0) await new Promise<void>((resolve) => setTimeout(resolve, 8));
+}
+
 /**
  * Shader programs for the mounted scene (hidden layers included), without blocking the main thread:
  *  - every group the Scene commits starts its programs linking at once (in the GPU process, in parallel), while the main
  *    thread goes on building the next group;
- *  - when everything is built it waits for the last links, then reads the uniform tables (three does that lazily inside
- *    the first draw: ~30 ms a program on this machine, 1 s in all), then reports.
+ *  - when everything is built it reads the uniform tables as the programs finish linking and uploads the textures, then
+ *    reports.
  * Rendering is held back ('never') until then, so the first frame has nothing left to prepare.
+ * Groups that mount after that (the late layers) get the same treatment behind the running frames.
  */
 export function BootGate({ stage, built, onCompiled }: { stage: number; built: boolean; onCompiled: () => void }) {
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
+  const seen = useRef<WeakSet<object>>(new WeakSet()).current;
+  const booted = useRef(false);
 
   useEffect(() => {
     if (stage > 0 && !built) gl.compile(scene, camera);
@@ -209,28 +292,31 @@ export function BootGate({ stage, built, onCompiled }: { stage: number; built: b
   useEffect(() => {
     if (!built) return;
     let alive = true;
+    let timer = 0;
     const done = () => {
-      if (alive) onCompiled();
+      if (!alive) return;
+      alive = false; // also stops a warm-up that is still waiting on a program (the timeout below)
+      window.clearTimeout(timer);
+      booted.current = true;
+      onCompiled();
     };
-    const warm = async () => {
-      let start = performance.now();
-      for (const program of gl.info.programs ?? []) {
-        if (!alive) return;
-        program.getUniforms();
-        program.getAttributes();
-        if (performance.now() - start > WARM_SLICE_MS) {
-          await yieldToMain();
-          start = performance.now();
-        }
-      }
-    };
-    const timer = window.setTimeout(done, COMPILE_TIMEOUT_MS);
-    gl.compileAsync(scene, camera).then(warm).then(done, done);
+    timer = window.setTimeout(done, COMPILE_TIMEOUT_MS);
+    warmUp(gl, scene, camera, seen, () => alive).then(done, done);
     return () => {
       alive = false;
       window.clearTimeout(timer);
     };
-  }, [gl, scene, camera, built, onCompiled]);
+  }, [gl, scene, camera, built, onCompiled, seen]);
+
+  // A group that mounts once the loop runs: link its programs and warm them behind the frames.
+  useEffect(() => {
+    if (!built || !booted.current) return;
+    let alive = true;
+    warmUp(gl, scene, camera, seen, () => alive).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [gl, scene, camera, stage, built, seen]);
 
   return null;
 }

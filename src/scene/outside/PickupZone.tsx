@@ -26,7 +26,7 @@ const DECALS: Decal[] = [
 const SCOOTERS: { x: number; z: number; ry: number; style: ScooterStyle }[] = [
   { x: 1.3, z: 53, ry: 7, style: { body: BRAND.teal, box: BRAND.teal, band: BRAND.cream } },
   { x: 14.6, z: 53, ry: -9, style: { body: '#c35a26', box: '#c35a26', band: BRAND.cream } },
-  { x: 20.7, z: 53, ry: -6, style: { body: '#efe0c0', box: '#20282b', band: '#c35a26' } },
+  { x: 20.7, z: 53, ry: -6, style: { body: '#efe0c0', box: '#4a575e', band: '#c35a26' } },
 ];
 
 function makeParts() {

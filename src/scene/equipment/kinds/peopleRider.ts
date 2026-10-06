@@ -29,7 +29,7 @@ const chargeLockers: KindBuilder = (b, it) => {
       b.box({ m: 'emissive', c: '#5cff95', x: x + cw / 2 - 0.11, y: y + ch - 0.17, z: d / 2 + 0.04, w: 0.09, h: 0.09, d: 0.02 });
     }
   }
-  b.box({ c: '#14403f', y: h, w: w + 0.04, h: 0.4, d: d + 0.04 });
+  b.box({ c: '#1f5e5c', y: h, w: w + 0.04, h: 0.4, d: d + 0.04 });
   b.sign({ text: 'CHARGE', x: 0, y: h + 0.2, z: d / 2 + 0.03, w: Math.min(1.8, w - 0.3), h: 0.3, fg: GLOW.cream, weight: 700 });
 };
 
